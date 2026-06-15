@@ -1590,6 +1590,17 @@ html.light-mode .pill.active      { background: rgba(255,107,53,0.15) !important
 </div>
 
 <!-- ═══════ AUTO-REP (beta) ═══════ -->
+<!-- SENSOR PERMISSION PRE-PROMPT MODAL -->
+<div id="sensor-perm-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:flex-end;justify-content:center;padding:0 0 calc(34px + var(--safe-bottom,0px))">
+  <div style="background:var(--bg-card,#1C1C1E);border-radius:22px 22px 22px 22px;max-width:420px;width:calc(100% - 32px);padding:28px 24px 24px;text-align:center;box-shadow:0 8px 48px rgba(0,0,0,0.6)">
+    <div style="font-size:44px;margin-bottom:12px">📳</div>
+    <div style="font-size:20px;font-weight:800;color:var(--text,#fff);margin-bottom:8px;letter-spacing:-.3px">Motion Access Needed</div>
+    <div style="font-size:14px;color:var(--text2,rgba(255,255,255,0.6));line-height:1.55;margin-bottom:24px">Auto-Rep uses your phone's motion sensor to count reps hands-free — no tapping required. Tap <strong style="color:var(--text,#fff)">Allow</strong> on the next prompt to enable it.</div>
+    <button onclick="sensorPermAllow()" style="width:100%;padding:15px;background:var(--accent,#FF6B35);border:none;border-radius:14px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;margin-bottom:10px;letter-spacing:-.1px">Allow Motion Access</button>
+    <button onclick="sensorPermSkip()" style="width:100%;padding:12px;background:transparent;border:none;font-size:14px;font-weight:600;color:var(--text2,rgba(255,255,255,0.5));cursor:pointer">Not Now</button>
+  </div>
+</div>
+
 <div id="rep-counter-overlay">
   <div class="rc-header">
     <div>
@@ -2331,79 +2342,6 @@ function renderExList(){
 
   document.getElementById('ex-list').innerHTML = html;
 }
-function filterExercises(){ renderExList(); }
-
-
-function epToggleForm() {
-  epFormOpen = !epFormOpen;
-  const form = document.getElementById('ep-form');
-  const chev = document.getElementById('ep-toggle-chev');
-  form.style.display = epFormOpen ? '' : 'none';
-  chev.style.transform = epFormOpen ? 'rotate(45deg)' : '';
-  if (epFormOpen) { epRenderEquipPills('ep-equip-pills', epEquipSel, 'epSetEquip'); epRenderPhotoCam(); document.getElementById('ep-ex-name').focus(); }
-}
-function epSetEquip(t) { epEquipSel = t; epRenderEquipPills('ep-equip-pills', epEquipSel, 'epSetEquip'); }
-function epRenderEquipPills(elId, sel, fn) {
-  document.getElementById(elId).innerHTML = RC_EQUIP_TYPES.map(t =>
-    '<button class="rc-equip-pill' + (t === sel ? ' sel' : '') + '" onclick="' + fn + '(\'' + t + '\')">' + t + '</button>'
-  ).join('');
-}
-function epRenderPhotoCam() {
-  const cam = document.getElementById('ep-photo-cam');
-  if (cam) cam.innerHTML = exIcon('camera', 18);
-}
-function epPhotoPicked(ev) {
-  const file = ev.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement('canvas');
-      const sc = Math.min(1, 240 / Math.max(img.width, img.height));
-      c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      epPhotoDataUrl = c.toDataURL('image/jpeg', 0.7);
-      const prev = document.getElementById('ep-photo-prev');
-      prev.src = epPhotoDataUrl; prev.style.display = '';
-      document.getElementById('ep-photo-btn').style.display = 'none';
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-function epSaveCustomEx() {
-  const rawName = (document.getElementById('ep-ex-name').value || '').trim();
-  const name = rawName || (epEquipSel + ' Exercise');
-  const ex = { id: 'cust_' + Date.now(), name, muscle: epEquipSel, equipment: epEquipSel, icon: 'camera', color: '#BF5AF2', photo: epPhotoDataUrl };
-  window.CUSTOM_EX.unshift(ex);
-  try { localStorage.setItem('hevy_custom_ex', JSON.stringify(window.CUSTOM_EX)); } catch (_) {}
-  selectEx(ex.id);
-}
-function epAutoCreate(name) {
-  // Called from "no results" empty state — create immediately with typed name
-  const ex = { id: 'cust_' + Date.now(), name: name || 'Custom Exercise', muscle: 'Custom', equipment: 'Other', icon: 'camera', color: '#BF5AF2', photo: null };
-  window.CUSTOM_EX.unshift(ex);
-  try { localStorage.setItem('hevy_custom_ex', JSON.stringify(window.CUSTOM_EX)); } catch (_) {}
-  selectEx(ex.id);
-}
-function epStartEdit(id) {
-  epEditId = id; renderExList();
-  // scroll edit row into view
-  setTimeout(() => { const el = document.getElementById('ep-edit-' + id); if (el) el.scrollIntoView({ block: 'nearest' }); }, 50);
-}
-function epSaveEdit(id) {
-  const ex = (window.CUSTOM_EX || []).find(e => e.id === id); if (!ex) return;
-  const nameEl = document.getElementById('ep-edit-name-' + id);
-  if (nameEl && nameEl.value.trim()) ex.name = nameEl.value.trim();
-  // equipment
-  const sel = document.querySelector('#ep-edit-equip-' + id + ' .rc-equip-pill.sel');
-  if (sel) { ex.equipment = sel.textContent; ex.muscle = sel.textContent; }
-  // photo — check if new photo was taken during edit
-  const photoUrl = window['_epEditPhoto_' + id];
-  if (photoUrl) { ex.photo = photoUrl; delete window['_epEditPhoto_' + id]; }
-  try { localStorage.setItem('hevy_custom_ex', JSON.stringify(window.CUSTOM_EX)); } catch (_) {}
-  epEditId = null; renderExList();
-}
 function epEditEquip(id, t) {
   // update selection in edit form only (not global epEquipSel)
   document.querySelectorAll('#ep-edit-equip-' + id + ' .rc-equip-pill').forEach(b => b.classList.toggle('sel', b.textContent === t));
@@ -3060,14 +2998,42 @@ function legendBannerTap() { if (legendMode) openLegendFlow(); }
 
 function openLegendFlow() {
   if (!S.activeWorkout) return;
-  // iOS 13+ requires explicit DeviceMotion permission
+  // iOS 13+ requires explicit DeviceMotion permission — show pre-prompt modal first
   if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    // Check if already granted (won't re-prompt if previously allowed)
     DeviceMotionEvent.requestPermission().then(state => {
-      if (state !== 'granted') { alert('Motion access is required for Auto-Rep counting. Please allow it in Settings → Safari → Motion & Orientation Access.'); return; }
-      _openLegendFlowCore();
-    }).catch(() => _openLegendFlowCore());
+      if (state === 'granted') { _openLegendFlowCore(); return; }
+      // Not yet granted — show friendly explanation before system dialog
+      const modal = document.getElementById('sensor-perm-modal');
+      if (modal) { modal.style.display = 'flex'; }
+    }).catch(() => {
+      // First time asking — show modal so user understands what's coming
+      const modal = document.getElementById('sensor-perm-modal');
+      if (modal) { modal.style.display = 'flex'; } else { _openLegendFlowCore(); }
+    });
     return;
   }
+  _openLegendFlowCore();
+}
+function sensorPermAllow() {
+  const modal = document.getElementById('sensor-perm-modal');
+  if (modal) modal.style.display = 'none';
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().then(state => {
+      if (state !== 'granted') {
+        alert('Motion access denied. To enable it: Settings → Safari → Motion & Orientation Access → On.');
+        return;
+      }
+      _openLegendFlowCore();
+    }).catch(() => _openLegendFlowCore());
+  } else {
+    _openLegendFlowCore();
+  }
+}
+function sensorPermSkip() {
+  const modal = document.getElementById('sensor-perm-modal');
+  if (modal) modal.style.display = 'none';
+  // Proceed without motion — rep counting will use manual tap fallback
   _openLegendFlowCore();
 }
 function _openLegendFlowCore() {
