@@ -838,6 +838,64 @@ input[type=range].rc-slider::-webkit-slider-thumb { -webkit-appearance: none; ap
 
 /* every control inherits Figtree — buttons/inputs do not inherit by default */
 button, input, select, textarea { font-family: inherit; }
+
+/* ── VOICE LOGGER ── */
+#voice-mic-btn {
+  position: fixed; bottom: 88px; right: 20px; z-index: 80;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  border: none; cursor: pointer; font-size: 22px;
+  display: none; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px rgba(79,70,229,0.45);
+  transition: transform .15s, box-shadow .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+#voice-mic-btn:active { transform: scale(.93); }
+#voice-mic-btn.listening {
+  background: linear-gradient(135deg, #DC2626, #B91C1C);
+  box-shadow: 0 4px 20px rgba(220,38,38,0.5);
+  animation: mic-pulse 1s ease-in-out infinite;
+}
+@keyframes mic-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+#voice-toast {
+  position: fixed; bottom: 155px; right: 16px; z-index: 81;
+  background: rgba(15,15,30,0.95); border: 1px solid rgba(79,70,229,0.3);
+  border-radius: 14px; padding: 10px 14px; max-width: 220px;
+  font-size: 13px; color: #A5B4FC; font-weight: 500;
+  display: none; line-height: 1.4;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+/* AI scan overlay on photo button */
+#rc-ai-scan-badge {
+  position: absolute; bottom: -4px; right: -4px;
+  background: #4F46E5; border-radius: 50%;
+  width: 18px; height: 18px; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid #000; color: #fff; font-weight: 800;
+}
+.rc-photo-line { position: relative; }
+
+/* Gemini key setup */
+#gemini-key-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: #0D0D1A; border-top: 1px solid rgba(79,70,229,0.25);
+  padding: 14px 18px env(safe-area-inset-bottom,14px);
+  display: flex; gap: 10px; align-items: center;
+}
+#gemini-key-bar input {
+  flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(79,70,229,0.25);
+  border-radius: 10px; padding: 9px 12px; color: #fff; font-size: 13px;
+  font-family: inherit; outline: none;
+}
+#gemini-key-bar button {
+  background: #4F46E5; color: #fff; border: none; border-radius: 10px;
+  padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+}
+
 </style>
 <style>
 /* ── Exercise picker custom-form row ── */
@@ -3016,13 +3074,15 @@ function rcPhotoPicked(e) {
     const img = new Image();
     img.onload = () => {
       const c = document.createElement('canvas');
-      const sc = Math.min(1, 240 / Math.max(img.width, img.height));
+      const sc = Math.min(1, 400 / Math.max(img.width, img.height));
       c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      rcPhotoData = c.toDataURL('image/jpeg', 0.7);
+      rcPhotoData = c.toDataURL('image/jpeg', 0.8);
       const prev = rcEl('rc-photo-prev');
       prev.src = rcPhotoData; prev.style.display = '';
       rcEl('rc-photo-btn').style.display = 'none';
+      // ── Gemini Vision: auto-identify machine ──
+      geminiScanMachine(rcPhotoData.split(',')[1]);
     };
     img.src = ev.target.result;
   };
@@ -3472,6 +3532,282 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' });
   });
 }
+
+// ══════════════════════════════════════════════
+//  GEMINI AI — KEY MANAGEMENT
+// ══════════════════════════════════════════════
+function getGeminiKey() { return localStorage.getItem('rl_gemini_key') || ''; }
+function saveGeminiKey() {
+  const k = (document.getElementById('gemini-key-input').value || '').trim();
+  if (!k.startsWith('AIza')) { alert('Key should start with AIza…'); return; }
+  localStorage.setItem('rl_gemini_key', k);
+  document.getElementById('gemini-key-bar').style.display = 'none';
+  showVoiceToast('✨ Gemini connected! Tap 🎙️ to voice-log or take a photo to scan.', 3000);
+  revealAIFeatures();
+}
+function checkGeminiKey() {
+  if (getGeminiKey()) { revealAIFeatures(); }
+  else { document.getElementById('gemini-key-bar').style.display = 'flex'; }
+}
+function revealAIFeatures() {
+  const mic = document.getElementById('voice-mic-btn');
+  if (mic) mic.style.display = 'flex';
+}
+
+async function geminiCall(payload) {
+  const key = getGeminiKey();
+  if (!key) return null;
+  const res = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + key,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
+}
+
+// ══════════════════════════════════════════════
+//  GEMINI VISION — MACHINE SCAN
+// ══════════════════════════════════════════════
+async function geminiScanMachine(base64Jpeg) {
+  const nameEl = document.getElementById('rc-custom-name');
+  if (nameEl) { nameEl.placeholder = '🔍 Identifying machine…'; nameEl.value = ''; }
+  playTone(440, 0.05, 'sine', 0.15); // soft scanning tone
+
+  const result = await geminiCall({
+    contents: [{ parts: [
+      { inline_data: { mime_type: 'image/jpeg', data: base64Jpeg } },
+      { text: 'You are a gym equipment identifier. Look at this image and identify the gym machine or exercise equipment. Reply with ONLY the exercise name — 2-4 words max. Examples: "Lat Pulldown", "Leg Press Machine", "Cable Row", "Chest Fly Machine", "Smith Machine". If you cannot identify it, reply "Custom Machine".' }
+    ]}]
+  });
+
+  if (nameEl) {
+    if (result) {
+      nameEl.value = result.replace(/['"]/g, '');
+      nameEl.placeholder = 'name the machine';
+      playChime('success');
+      showVoiceToast('✨ ' + nameEl.value + ' identified!', 2000);
+    } else {
+      nameEl.placeholder = 'name the machine';
+      nameEl.focus();
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+//  VOICE AUTO-LOGGER
+// ══════════════════════════════════════════════
+let voiceRecognition = null;
+let voiceActive = false;
+
+function voiceToggle() {
+  if (voiceActive) { stopVoice(); return; }
+  startVoice();
+}
+
+function startVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showVoiceToast('Voice not supported on this browser. Try Chrome.', 3000); return; }
+
+  voiceRecognition = new SR();
+  voiceRecognition.lang = 'en-US';
+  voiceRecognition.interimResults = true;
+  voiceRecognition.maxAlternatives = 1;
+
+  voiceRecognition.onstart = () => {
+    voiceActive = true;
+    document.getElementById('voice-mic-btn').classList.add('listening');
+    document.getElementById('voice-mic-btn').textContent = '⏹';
+    showVoiceToast('Listening… say your exercise, sets and reps', 0);
+    playTone(520, 0.06, 'sine', 0.12);
+  };
+
+  voiceRecognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    showVoiceToast('🎙️ "' + transcript + '"', 0);
+    if (e.results[e.results.length - 1].isFinal) {
+      stopVoice();
+      parseVoiceLog(transcript);
+    }
+  };
+
+  voiceRecognition.onerror = (e) => {
+    stopVoice();
+    showVoiceToast('Could not hear you — try again', 2500);
+  };
+
+  voiceRecognition.onend = () => { if (voiceActive) stopVoice(); };
+  voiceRecognition.start();
+}
+
+function stopVoice() {
+  voiceActive = false;
+  const btn = document.getElementById('voice-mic-btn');
+  btn.classList.remove('listening');
+  btn.textContent = '🎙️';
+  if (voiceRecognition) { try { voiceRecognition.stop(); } catch(_){} voiceRecognition = null; }
+}
+
+async function parseVoiceLog(text) {
+  showVoiceToast('✨ Parsing "' + text + '"…', 0);
+
+  const exerciseList = (window.EXERCISES || []).slice(0, 60).map(e => e.name).join(', ');
+
+  const prompt = `You are a workout logging assistant. Parse this voice input into a JSON object.
+
+Voice input: "${text}"
+
+Known exercises (match to these if possible): ${exerciseList}
+
+Reply with ONLY valid JSON, nothing else:
+{"exercise": "Exercise Name", "sets": number_or_null, "reps": number_or_null, "weight": number_or_null, "unit": "lbs"}
+
+Rules:
+- exercise: match to known exercise name or use what was said
+- sets: number if mentioned, else null
+- reps: number if mentioned, else null  
+- weight: number if mentioned, else null
+- unit: "lbs" by default unless "kg" or "kilos" mentioned`;
+
+  const raw = await geminiCall({ contents: [{ parts: [{ text: prompt }] }] });
+
+  if (!raw) { showVoiceToast('Could not parse — try again', 2500); return; }
+
+  let parsed;
+  try {
+    const jsonStr = raw.match(/\{[\s\S]*\}/)?.[0];
+    parsed = JSON.parse(jsonStr);
+  } catch(_) {
+    showVoiceToast('Could not understand — try: "bench press 3 sets 10 reps"', 3000);
+    return;
+  }
+
+  // Apply to UI
+  applyVoiceLog(parsed);
+}
+
+function applyVoiceLog(data) {
+  // Fill weight if present
+  const kgEl = document.getElementById('rc-kg');
+  if (kgEl && data.weight) {
+    let w = parseFloat(data.weight);
+    if (data.unit === 'lbs') w = Math.round(w * 0.453592 * 10) / 10;
+    kgEl.value = w;
+  }
+
+  // Find matching exercise
+  const allEx = [...(window.CUSTOM_EX || []), ...(window.EXERCISES || [])];
+  const name = (data.exercise || '').toLowerCase();
+  let match = allEx.find(e => e.name.toLowerCase() === name);
+  if (!match) match = allEx.find(e => e.name.toLowerCase().includes(name) || name.includes(e.name.toLowerCase()));
+
+  const summary = [
+    data.exercise,
+    data.sets ? data.sets + ' sets' : null,
+    data.reps ? data.reps + ' reps' : null,
+    data.weight ? data.weight + ' ' + (data.unit || 'lbs') : null
+  ].filter(Boolean).join(' · ');
+
+  if (match) {
+    playChime('success');
+    showVoiceToast('✅ Logged: ' + summary, 3000);
+    rcLogPick(match.id);
+  } else {
+    // Prefill search
+    const searchEl = document.getElementById('rc-ex-search');
+    if (searchEl) { searchEl.value = data.exercise || ''; if (typeof rcRenderExList === 'function') rcRenderExList(); }
+    playChime('soft');
+    showVoiceToast('🔍 "' + data.exercise + '" — pick from list below', 3000);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  AUDIO — CHIME + TONES (Web Audio API)
+// ══════════════════════════════════════════════
+let _audioCtx = null;
+function getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+function playTone(freq, gain, type, duration) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const vol = ctx.createGain();
+    osc.connect(vol); vol.connect(ctx.destination);
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    vol.gain.setValueAtTime(gain, ctx.currentTime);
+    vol.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(); osc.stop(ctx.currentTime + duration);
+  } catch(_){}
+}
+
+function playChime(type) {
+  try {
+    const ctx = getAudioCtx();
+    if (type === 'success') {
+      // Rising two-tone chime: C5 → E5
+      [[523, 0], [659, 0.12], [784, 0.24]].forEach(([f, delay]) => {
+        const osc = ctx.createOscillator();
+        const vol = ctx.createGain();
+        osc.connect(vol); vol.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        vol.gain.setValueAtTime(0, ctx.currentTime + delay);
+        vol.gain.linearRampToValueAtTime(0.18, ctx.currentTime + delay + 0.03);
+        vol.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.35);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.4);
+      });
+    } else if (type === 'soft') {
+      playTone(440, 0.12, 'sine', 0.25);
+    }
+  } catch(_){}
+}
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function showVoiceToast(msg, duration) {
+  const t = document.getElementById('voice-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.display = 'block';
+  if (duration > 0) setTimeout(() => { t.style.display = 'none'; }, duration);
+}
+
+// Show mic on log screen, hide on other phases
+function updateMicVisibility() {
+  const mic = document.getElementById('voice-mic-btn');
+  if (!mic || !getGeminiKey()) return;
+  const logPhase = document.getElementById('rc-phase-log');
+  mic.style.display = (logPhase && logPhase.classList.contains('rc-active')) ? 'flex' : 'none';
+}
+
+// ── Init on load ──
+document.addEventListener('DOMContentLoaded', () => {
+  checkGeminiKey();
+  // Watch for phase changes to show/hide mic
+  const observer = new MutationObserver(updateMicVisibility);
+  const phases = document.querySelectorAll('.rc-phase');
+  phases.forEach(p => observer.observe(p, { attributes: true, attributeFilter: ['class'] }));
+});
+
 </script>
+
+<!-- VOICE LOGGER MIC BUTTON -->
+<button id="voice-mic-btn" onclick="voiceToggle()" title="Voice log">🎙️</button>
+<div id="voice-toast"></div>
+
+<!-- GEMINI KEY SETUP BAR (shows if no key saved) -->
+<div id="gemini-key-bar" style="display:none">
+  <span style="font-size:20px">✨</span>
+  <input id="gemini-key-input" type="password" placeholder="Paste Gemini API key to enable AI features (AIza…)" />
+  <button onclick="saveGeminiKey()">Save</button>
+</div>
+
 </body>
 </html>

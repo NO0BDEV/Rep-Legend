@@ -34,7 +34,8 @@ Accelerometer auto-count only works on a real mobile device — desktop shows th
 | Word-by-word quotes | ✅ | Appears after 19s |
 | Loss-framed streak | ✅ | Adaptive by streak length |
 | Exercise logging | ✅ | Search + custom add |
-| AI machine scan | ✅ | Claude Vision; needs Anthropic API key (stored locally) |
+| AI machine scan | ✅ | Gemini Vision; needs Gemini API key (stored in localStorage as `rl_gemini_key`) |
+| Voice auto-logger | ✅ | Web Speech API + Gemini Flash NLP; tap 🎙️ mic to speak workout, auto-logs |
 | Score reveal | ✅ | Slot-machine grade, XP count-up |
 | Variable XP bonus | ✅ | Secret multiplier ~20% of sessions |
 | History screen | ✅ | All workouts + grades, glass cards |
@@ -47,7 +48,7 @@ Accelerometer auto-count only works on a real mobile device — desktop shows th
 - No cloud sync — data is localStorage only (per device)
 - Grade rubric is rep-volume based; will incorporate weight in v2
 - iOS sensor permission dialog appears once when enabling auto-count
-- Machine scan requires your own Anthropic API key (`sk-ant-...`)
+- AI features (machine scan + voice logger) require a Gemini API key (AIza…) — enter once in-app, stored locally
 
 ## Metrics that will sharpen the algorithm
 
