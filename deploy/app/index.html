@@ -1887,7 +1887,7 @@ const THEMES = [
 ];
 let currentTheme = (function(){ try { return localStorage.getItem('hevy_theme') || 'carbon'; } catch(_){ return 'carbon'; } })();
 
-function applyTheme(id) {
+function applyBuiltinTheme(id) {
   const t = THEMES.find(th => th.id === id) || THEMES[0];
   currentTheme = t.id;
   let el = document.getElementById('theme-vars');
@@ -1909,7 +1909,7 @@ function selectTheme(id) {
     if (el) { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = 'rcPulse .3s ease'; }
     return;
   }
-  applyTheme(id);
+  applyBuiltinTheme(id);
 }
 function renderThemePicker() {
   const el = document.getElementById('theme-scroll'); if (!el) return;
@@ -1928,7 +1928,7 @@ function renderThemePicker() {
   }).join('');
 }
 // Init theme on load
-applyTheme(currentTheme);
+applyBuiltinTheme(currentTheme);
 
 // ══════════════════════════════════════
 // DARK MODE
