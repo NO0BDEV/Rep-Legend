@@ -1367,21 +1367,19 @@ html.light-mode .pill.active      { background: rgba(255,107,53,0.15) !important
 .auth-error.show { display: block; }
 
 /* ══════════════════════════════════
-   TAB TRANSITIONS
+   TAB TRANSITIONS  (iOS directional slide)
 ══════════════════════════════════ */
-.screen {
-  transition: opacity 0.22s ease, transform 0.22s ease;
-}
-.screen.tab-exit {
-  opacity: 0; transform: translateY(6px); pointer-events: none;
-}
-.screen.tab-enter {
-  animation: tabSlideIn 0.25s ease forwards;
-}
-@keyframes tabSlideIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+.screen { will-change: transform, opacity; }
+
+.screen.tab-exit-left  { animation: tabExitLeft   0.27s cubic-bezier(0.25,0.46,0.45,0.94) forwards; pointer-events: none; z-index: 0; }
+.screen.tab-exit-right { animation: tabExitRight  0.27s cubic-bezier(0.25,0.46,0.45,0.94) forwards; pointer-events: none; z-index: 0; }
+.screen.tab-enter-right{ animation: tabEnterRight 0.27s cubic-bezier(0.25,0.46,0.45,0.94) forwards; z-index: 1; }
+.screen.tab-enter-left { animation: tabEnterLeft  0.27s cubic-bezier(0.25,0.46,0.45,0.94) forwards; z-index: 1; }
+
+@keyframes tabExitLeft   { from{opacity:1;transform:translateX(0)}     to{opacity:0;transform:translateX(-24px)} }
+@keyframes tabExitRight  { from{opacity:1;transform:translateX(0)}     to{opacity:0;transform:translateX(24px)}  }
+@keyframes tabEnterRight { from{opacity:0;transform:translateX(28px)}  to{opacity:1;transform:translateX(0)}    }
+@keyframes tabEnterLeft  { from{opacity:0;transform:translateX(-28px)} to{opacity:1;transform:translateX(0)}    }
 
 /* Delete account confirmation */
 #delete-confirm-overlay {
@@ -4756,23 +4754,42 @@ function updateProfileUI(user) {
   if (handleEl) handleEl.textContent = handle + ' · 🔥 PRO';
 }
 
-// ── Tab Transition Animations ─────────────────────
+// ── Tab Transition Animations (iOS directional slide) ─────────────────────
+const _ALL_ANIM_CLASSES = ['tab-exit-left','tab-exit-right','tab-enter-left','tab-enter-right'];
+const _TAB_ORDER = ['workout','routines','history','stats','profile'];
+let _curTabId = 'workout';
+
 const _origSwitchTab = window.switchTab;
 window.switchTab = function(tab) {
-  const prev = document.querySelector('.screen:not([style*="display: none"])');
-  if (prev && !prev.classList.contains('tab-exit')) {
-    prev.classList.add('tab-exit');
-    setTimeout(() => { prev.classList.remove('tab-exit'); }, 220);
+  if (tab === _curTabId) return;
+  const prevIdx = _TAB_ORDER.indexOf(_curTabId);
+  const nextIdx = _TAB_ORDER.indexOf(tab);
+  const goRight = nextIdx > prevIdx;
+
+  const exitCls  = goRight ? 'tab-exit-left'   : 'tab-exit-right';
+  const enterCls = goRight ? 'tab-enter-right'  : 'tab-enter-left';
+
+  // Animate outgoing screen (keep it visible via inline style during animation)
+  const prevEl = document.getElementById('tab-' + _curTabId);
+  if (prevEl) {
+    _ALL_ANIM_CLASSES.forEach(c => prevEl.classList.remove(c));
+    prevEl.style.display = 'flex';   // stay visible while exiting
+    void prevEl.offsetWidth;
+    prevEl.classList.add(exitCls);
+    setTimeout(() => { prevEl.classList.remove(exitCls); prevEl.style.display = ''; }, 290);
   }
-  if (_origSwitchTab) _origSwitchTab(tab);
-  setTimeout(() => {
-    const next = document.getElementById('tab-' + tab);
-    if (next) {
-      next.classList.remove('tab-enter');
-      void next.offsetWidth;
-      next.classList.add('tab-enter');
-    }
-  }, 10);
+
+  _curTabId = tab;
+  _origSwitchTab(tab);               // makes incoming .active (display:flex), removes .active from prev
+
+  // Animate incoming screen
+  const nextEl = document.getElementById('tab-' + tab);
+  if (nextEl) {
+    _ALL_ANIM_CLASSES.forEach(c => nextEl.classList.remove(c));
+    void nextEl.offsetWidth;
+    nextEl.classList.add(enterCls);
+    setTimeout(() => nextEl.classList.remove(enterCls), 310);
+  }
 };
 
 // ── Export Workouts (JSON) ─────────────────────────
