@@ -3998,10 +3998,12 @@ if ('serviceWorker' in navigator) {
 //  REP LEGEND AI — CLOUDFLARE WORKER ENGINE
 // ══════════════════════════════════════════════
 
-// ── Worker config (stored in localStorage) ──
-function getWorkerUrl()    { return (localStorage.getItem('rl_worker_url') || '').replace(/\/$/, ''); }
-function getWorkerSecret() { return localStorage.getItem('rl_worker_secret') || ''; }
-function hasWorker()       { return !!(getWorkerUrl() && getWorkerSecret()); }
+// ── Worker config ──
+const _WORKER_URL    = 'https://rep-legend-ai.replegend.workers.dev';
+const _WORKER_SECRET = 'RepLegend-AI-2024!';
+function getWorkerUrl()    { return (localStorage.getItem('rl_worker_url') || _WORKER_URL).replace(/\/$/, ''); }
+function getWorkerSecret() { return localStorage.getItem('rl_worker_secret') || _WORKER_SECRET; }
+function hasWorker()       { return true; } // Worker is always available
 
 function saveWorkerConfig() {
   const url = (document.getElementById('wsb-url').value || '').trim();
@@ -4016,8 +4018,7 @@ function saveWorkerConfig() {
 }
 
 function checkWorkerConfig() {
-  if (hasWorker()) { revealAIFeatures(); }
-  else { document.getElementById('worker-setup-bar').style.display = 'flex'; }
+  revealAIFeatures(); // Worker is always available
 }
 
 function revealAIFeatures() {
