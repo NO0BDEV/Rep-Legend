@@ -1229,12 +1229,252 @@ html.light-mode .nav-tab          { color: rgba(0,0,0,0.45) !important; }
 html.light-mode .nav-tab.active   { color: #1C1C1E !important; }
 html.light-mode .pill             { background: rgba(0,0,0,0.06) !important; color: #1C1C1E !important; }
 html.light-mode .pill.active      { background: rgba(255,107,53,0.15) !important; color: var(--accent) !important; }
+
+/* ══════════════════════════════════
+   SPLASH SCREEN
+══════════════════════════════════ */
+#splash-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #0A0A14;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+#splash-screen.hide {
+  opacity: 0; transform: scale(1.04); pointer-events: none;
+}
+.splash-logo {
+  width: 96px; height: 96px;
+  background: var(--accent);
+  border-radius: 26px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 60px rgba(255,107,53,0.5);
+  animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.splash-logo svg { width: 54px; height: 54px; }
+.splash-title {
+  margin-top: 20px;
+  font-size: 28px; font-weight: 800; letter-spacing: -0.5px;
+  color: var(--text);
+  animation: splashFade 0.5s 0.3s ease both;
+}
+.splash-sub {
+  margin-top: 6px;
+  font-size: 14px; color: var(--text2);
+  animation: splashFade 0.5s 0.4s ease both;
+}
+.splash-bar {
+  margin-top: 48px;
+  width: 120px; height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 99px; overflow: hidden;
+  animation: splashFade 0.5s 0.5s ease both;
+}
+.splash-bar-fill {
+  height: 100%; width: 0%; background: var(--accent);
+  border-radius: 99px;
+  animation: splashBarGrow 1.2s 0.4s ease forwards;
+}
+@keyframes splashPop {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+@keyframes splashFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes splashBarGrow {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* ══════════════════════════════════
+   AUTH OVERLAY
+══════════════════════════════════ */
+#auth-overlay {
+  position: fixed; inset: 0; z-index: 8000;
+  background: #0A0A14;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.35s ease;
+  overflow-y: auto;
+}
+#auth-overlay.visible {
+  opacity: 1; pointer-events: all;
+}
+.auth-logo {
+  width: 64px; height: 64px;
+  background: var(--accent);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px;
+  box-shadow: 0 0 40px rgba(255,107,53,0.4);
+}
+.auth-logo svg { width: 36px; height: 36px; }
+.auth-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; text-align: center; }
+.auth-sub { font-size: 14px; color: var(--text2); margin-bottom: 32px; text-align: center; }
+.auth-form { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
+.auth-input {
+  width: 100%; padding: 14px 16px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px; color: var(--text);
+  font-size: 16px; font-family: inherit;
+  outline: none; transition: border-color 0.2s;
+}
+.auth-input:focus { border-color: var(--accent); }
+.auth-input::placeholder { color: var(--text3); }
+.auth-btn-primary {
+  width: 100%; padding: 15px;
+  background: var(--accent); border: none;
+  border-radius: 14px; color: #fff;
+  font-size: 16px; font-weight: 700; font-family: inherit;
+  cursor: pointer; letter-spacing: -0.1px;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.auth-btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+.auth-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text3); font-size: 13px; margin: 4px 0;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.1);
+}
+.auth-btn-google {
+  width: 100%; padding: 14px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 14px; color: var(--text);
+  font-size: 15px; font-weight: 600; font-family: inherit;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background 0.2s, transform 0.15s;
+}
+.auth-btn-google:active { transform: scale(0.98); }
+.auth-btn-google:hover { background: rgba(255,255,255,0.11); }
+.auth-toggle {
+  margin-top: 8px; text-align: center;
+  font-size: 14px; color: var(--text2);
+}
+.auth-toggle span { color: var(--accent); cursor: pointer; font-weight: 600; }
+.auth-error {
+  background: rgba(255,69,58,0.15); border: 1px solid rgba(255,69,58,0.3);
+  border-radius: 10px; padding: 10px 14px;
+  color: #FF453A; font-size: 13px; display: none;
+}
+.auth-error.show { display: block; }
+
+/* ══════════════════════════════════
+   TAB TRANSITIONS
+══════════════════════════════════ */
+.screen {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.screen.tab-exit {
+  opacity: 0; transform: translateY(6px); pointer-events: none;
+}
+.screen.tab-enter {
+  animation: tabSlideIn 0.25s ease forwards;
+}
+@keyframes tabSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Delete account confirmation */
+#delete-confirm-overlay {
+  position: fixed; inset: 0; z-index: 7000;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: env(safe-area-inset-bottom, 24px);
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+#delete-confirm-overlay.visible { opacity: 1; pointer-events: all; }
+.delete-sheet {
+  background: #1C1C2E; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px 24px 0 0; padding: 24px 20px 32px;
+  width: 100%; max-width: 420px;
+}
+.delete-sheet h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.delete-sheet p { font-size: 14px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
+.delete-sheet-btns { display: flex; gap: 10px; flex-direction: column; }
+.btn-danger-confirm {
+  width: 100%; padding: 15px;
+  background: rgba(255,59,48,0.18); border: 1px solid rgba(255,59,48,0.35);
+  border-radius: 14px; color: #FF3B30;
+  font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+.btn-cancel-sheet {
+  width: 100%; padding: 15px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; color: var(--text);
+  font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+}
 </style>
 
 <link rel="manifest" href="/app/manifest.json">
 <meta name="theme-color" content="#FF6B35">
+
+<!-- Firebase SDK (CDN compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 </head>
 <body>
+
+<!-- ═══════ SPLASH SCREEN ═══════ -->
+<div id="splash-screen">
+  <div class="splash-logo">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 26v12M19 20v24M45 20v24M54 26v12M19 32h26" stroke="white" stroke-width="5" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="splash-title">Rep Legend</div>
+  <div class="splash-sub">Track progress. Build strength.</div>
+  <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+</div>
+
+<!-- ═══════ AUTH OVERLAY ═══════ -->
+<div id="auth-overlay">
+  <div class="auth-logo">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 26v12M19 20v24M45 20v24M54 26v12M19 32h26" stroke="white" stroke-width="5" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="auth-title">Rep Legend</div>
+  <div class="auth-sub" id="auth-subtitle">Sign in to track your progress</div>
+  <div class="auth-form">
+    <div class="auth-error" id="auth-error"></div>
+    <input class="auth-input" type="email" id="auth-email" placeholder="Email address" autocomplete="email">
+    <input class="auth-input" type="password" id="auth-password" placeholder="Password" autocomplete="current-password" style="display:none" id="auth-password">
+    <input class="auth-input" type="password" id="auth-password-confirm" placeholder="Confirm password" autocomplete="new-password" style="display:none">
+    <button class="auth-btn-primary" id="auth-cta-btn" onclick="authHandleCTA()">Continue</button>
+    <div class="auth-divider">or</div>
+    <button class="auth-btn-google" onclick="authGoogleSignIn()">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Continue with Google
+    </button>
+    <div class="auth-toggle" id="auth-toggle-row">
+      Don't have an account? <span onclick="authSwitchMode()">Sign up</span>
+    </div>
+    <div style="text-align:center;margin-top:4px">
+      <span style="font-size:12px;color:var(--text3);cursor:pointer" onclick="authForgotPassword()">Forgot password?</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ DELETE ACCOUNT CONFIRM ═══════ -->
+<div id="delete-confirm-overlay">
+  <div class="delete-sheet">
+    <h3>Delete Account</h3>
+    <p>This will permanently delete your account and all workout data. This cannot be undone.</p>
+    <div class="delete-sheet-btns">
+      <button class="btn-danger-confirm" onclick="confirmDeleteAccount()">Delete Everything</button>
+      <button class="btn-cancel-sheet" onclick="closeDeleteConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- Background -->
 <div id="bg-canvas">
@@ -1394,9 +1634,9 @@ html.light-mode .pill.active      { background: rgba(255,107,53,0.15) !important
       <div class="top-bar"><div class="title">Profile</div></div>
       <div style="flex:1;overflow-y:auto">
         <div class="profile-hero">
-          <div class="avatar">P</div>
-          <div class="ph-name">Paolo</div>
-          <div class="ph-handle">@paolo · <span class="badge badge-pro" style="font-size:10px">PRO</span></div>
+          <div class="avatar" id="profile-avatar">?</div>
+          <div class="ph-name" id="profile-name">Loading…</div>
+          <div class="ph-handle" id="profile-handle">Rep Legend</div>
           <div class="ph-stats-row">
             <div><div class="ph-stat-val" id="ph-workouts">0</div><div class="ph-stat-label">Workouts</div></div>
             <div><div class="ph-stat-val">0</div><div class="ph-stat-label">Following</div></div>
@@ -1433,8 +1673,12 @@ html.light-mode .pill.active      { background: rgba(255,107,53,0.15) !important
 
         <div class="section-header">DATA</div>
         <div class="glist">
-          <div class="grow"><div class="grow-icon">📤</div><div class="grow-body"><div class="grow-title">Export Workouts</div></div><div class="grow-chevron">›</div></div>
-          <div class="grow"><div class="grow-icon">📊</div><div class="grow-body"><div class="grow-title">Export Measurements</div></div><div class="grow-chevron">›</div></div>
+          <div class="grow" onclick="exportWorkouts()" style="cursor:pointer"><div class="grow-icon">📤</div><div class="grow-body"><div class="grow-title">Export Workouts</div><div class="grow-sub">Save as JSON</div></div><div class="grow-chevron">›</div></div>
+          <div class="grow" onclick="exportMeasurements()" style="cursor:pointer"><div class="grow-icon">📊</div><div class="grow-body"><div class="grow-title">Export Measurements</div><div class="grow-sub">Save as CSV</div></div><div class="grow-chevron">›</div></div>
+          <div class="grow" style="cursor:pointer;position:relative" onclick="document.getElementById('import-file-input').click()">
+            <div class="grow-icon">📥</div><div class="grow-body"><div class="grow-title">Import Workouts</div><div class="grow-sub">Load from JSON backup</div></div><div class="grow-chevron">›</div>
+            <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importWorkouts(event)">
+          </div>
         </div>
 
         <div class="section-header">ABOUT</div>
@@ -1443,8 +1687,13 @@ html.light-mode .pill.active      { background: rgba(255,107,53,0.15) !important
           <div class="grow"><div class="grow-icon">🐛</div><div class="grow-body"><div class="grow-title">Bug Report</div></div><div class="grow-chevron">›</div></div>
         </div>
 
-        <div style="padding:24px 16px 8px">
-          <button onclick="window.location.href='../index.html'" style="width:100%;padding:14px;background:rgba(255,59,48,0.12);border:1px solid rgba(255,59,48,0.25);border-radius:14px;color:#FF3B30;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:-.1px">← Back to Home</button>
+        <div class="section-header">ACCOUNT</div>
+        <div class="glist">
+          <div class="grow" onclick="authSignOut()" style="cursor:pointer"><div class="grow-icon">🚪</div><div class="grow-body"><div class="grow-title">Sign Out</div></div><div class="grow-chevron">›</div></div>
+          <div class="grow" onclick="openDeleteConfirm()" style="cursor:pointer"><div class="grow-icon">🗑️</div><div class="grow-body"><div class="grow-title" style="color:#FF3B30">Delete Account</div><div class="grow-sub">Permanently remove all data</div></div><div class="grow-chevron" style="color:#FF3B30">›</div></div>
+        </div>
+        <div style="padding:16px 16px 8px">
+          <button onclick="window.location.href='../index.html'" style="width:100%;padding:14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;letter-spacing:-.1px">← Back to Home</button>
         </div>
         <div class="pb-safe"></div>
       </div>
@@ -1920,7 +2169,7 @@ function applyBuiltinTheme(id) {
 }
 function selectTheme(id) {
   const t = THEMES.find(th => th.id === id);
-  const isPro = true; // Paolo is PRO; swap to actual check when auth exists
+  const isPro = !!window._fbUser; // true when logged in
   if (!t || (!t.free && !isPro)) {
     // show upgrade nudge
     const el = document.getElementById('theme-scroll');
@@ -1931,7 +2180,7 @@ function selectTheme(id) {
 }
 function renderThemePicker() {
   const el = document.getElementById('theme-scroll'); if (!el) return;
-  const isPro = true;
+  const isPro = !!window._fbUser;
   el.innerHTML = THEMES.map(t => {
     const locked = !t.free && !isPro;
     const sel = currentTheme === t.id;
@@ -4297,6 +4546,347 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- THEME FAB -->
 <button id="theme-fab" onclick="openThemePanel()" title="AI Theme Studio">🎨</button>
+
+<!-- ═══════════════════════════════════════════════
+     FIREBASE AUTH + SPLASH + EXPORT/IMPORT
+════════════════════════════════════════════════ -->
+<script>
+// ── Firebase Config ──────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAmW3Enc2GYgrTq1tJ6_36dAMikfWmQqF8",
+  authDomain: "rep-legend.firebaseapp.com",
+  projectId: "rep-legend",
+  storageBucket: "rep-legend.firebasestorage.app",
+  messagingSenderId: "323213848324",
+  appId: "1:323213848324:web:1b0d5757617d622a412a51",
+  measurementId: "G-GB7ZPNKK2Z"
+};
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+
+// ── Global user state ─────────────────────────────
+window._fbUser = null;
+let _authMode = 'email'; // 'email' | 'login' | 'signup'
+
+// ── Splash Screen ─────────────────────────────────
+function hideSplash() {
+  const splash = document.getElementById('splash-screen');
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(() => { splash.style.display = 'none'; }, 600);
+  }
+}
+
+// ── Auth Overlay ──────────────────────────────────
+function showAuthOverlay() {
+  const el = document.getElementById('auth-overlay');
+  if (el) el.classList.add('visible');
+  document.getElementById('auth-email').focus();
+  _authMode = 'email';
+  document.getElementById('auth-password').style.display = 'none';
+  document.getElementById('auth-password-confirm').style.display = 'none';
+  document.getElementById('auth-cta-btn').textContent = 'Continue';
+  document.getElementById('auth-subtitle').textContent = 'Sign in to track your progress';
+  document.getElementById('auth-toggle-row').style.display = 'none';
+}
+
+function hideAuthOverlay() {
+  const el = document.getElementById('auth-overlay');
+  if (el) el.classList.remove('visible');
+}
+
+function authSetError(msg) {
+  const el = document.getElementById('auth-error');
+  if (!msg) { el.classList.remove('show'); el.textContent = ''; return; }
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+// Step 1: email entered → figure out login vs signup
+async function authHandleCTA() {
+  authSetError('');
+  const email = document.getElementById('auth-email').value.trim();
+  const btn = document.getElementById('auth-cta-btn');
+
+  if (_authMode === 'email') {
+    if (!email || !email.includes('@')) { authSetError('Enter a valid email address.'); return; }
+    btn.disabled = true; btn.textContent = 'Checking…';
+    try {
+      const methods = await fbAuth.fetchSignInMethodsForEmail(email);
+      if (methods && methods.length > 0) {
+        // Existing user → show password
+        _authMode = 'login';
+        document.getElementById('auth-password').style.display = '';
+        document.getElementById('auth-password').focus();
+        document.getElementById('auth-password-confirm').style.display = 'none';
+        document.getElementById('auth-cta-btn').textContent = 'Sign In';
+        document.getElementById('auth-subtitle').textContent = 'Welcome back!';
+        document.getElementById('auth-toggle-row').style.display = 'none';
+      } else {
+        // New user → show password + confirm
+        _authMode = 'signup';
+        document.getElementById('auth-password').style.display = '';
+        document.getElementById('auth-password').focus();
+        document.getElementById('auth-password-confirm').style.display = '';
+        document.getElementById('auth-cta-btn').textContent = 'Create Account';
+        document.getElementById('auth-subtitle').textContent = 'Create your account';
+        document.getElementById('auth-toggle-row').style.display = 'block';
+      }
+    } catch(e) {
+      authSetError('Could not check email. Try again.');
+    }
+    btn.disabled = false;
+    return;
+  }
+
+  const password = document.getElementById('auth-password').value;
+  if (!password || password.length < 6) { authSetError('Password must be at least 6 characters.'); return; }
+
+  btn.disabled = true; btn.textContent = _authMode === 'login' ? 'Signing in…' : 'Creating account…';
+  try {
+    if (_authMode === 'login') {
+      await fbAuth.signInWithEmailAndPassword(email, password);
+    } else {
+      const confirm = document.getElementById('auth-password-confirm').value;
+      if (password !== confirm) { authSetError('Passwords do not match.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
+      await fbAuth.createUserWithEmailAndPassword(email, password);
+    }
+    // onAuthStateChanged will handle the rest
+  } catch(e) {
+    const msgs = {
+      'auth/wrong-password': 'Incorrect password.',
+      'auth/user-not-found': 'No account with that email.',
+      'auth/email-already-in-use': 'Email already in use. Try signing in.',
+      'auth/invalid-email': 'Invalid email address.',
+      'auth/weak-password': 'Password too weak. Use 6+ characters.',
+      'auth/too-many-requests': 'Too many attempts. Try again later.',
+      'auth/invalid-credential': 'Incorrect email or password.',
+    };
+    authSetError(msgs[e.code] || e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = _authMode === 'login' ? 'Sign In' : 'Create Account';
+}
+
+function authSwitchMode() {
+  if (_authMode === 'signup') {
+    _authMode = 'login';
+    document.getElementById('auth-password-confirm').style.display = 'none';
+    document.getElementById('auth-cta-btn').textContent = 'Sign In';
+    document.getElementById('auth-toggle-row').innerHTML = "Don't have an account? <span onclick=\"authSwitchMode()\">Sign up</span>";
+  } else {
+    _authMode = 'signup';
+    document.getElementById('auth-password-confirm').style.display = '';
+    document.getElementById('auth-cta-btn').textContent = 'Create Account';
+    document.getElementById('auth-toggle-row').innerHTML = "Already have an account? <span onclick=\"authSwitchMode()\">Sign in</span>";
+  }
+}
+
+async function authGoogleSignIn() {
+  authSetError('');
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await fbAuth.signInWithPopup(provider);
+  } catch(e) {
+    if (e.code !== 'auth/popup-closed-by-user') authSetError(e.message);
+  }
+}
+
+async function authForgotPassword() {
+  const email = document.getElementById('auth-email').value.trim();
+  if (!email) { authSetError('Enter your email first, then tap "Forgot password".'); return; }
+  try {
+    await fbAuth.sendPasswordResetEmail(email);
+    authSetError('');
+    // show success in subtitle
+    document.getElementById('auth-subtitle').textContent = '✅ Reset email sent! Check your inbox.';
+  } catch(e) {
+    authSetError(e.message);
+  }
+}
+
+async function authSignOut() {
+  try {
+    await fbAuth.signOut();
+    // onAuthStateChanged will show auth overlay
+  } catch(e) {
+    console.error('Sign out error', e);
+  }
+}
+
+// ── Delete Account ────────────────────────────────
+function openDeleteConfirm() {
+  document.getElementById('delete-confirm-overlay').classList.add('visible');
+}
+function closeDeleteConfirm() {
+  document.getElementById('delete-confirm-overlay').classList.remove('visible');
+}
+async function confirmDeleteAccount() {
+  if (!window._fbUser) return;
+  closeDeleteConfirm();
+  try {
+    // Wipe all localStorage data
+    const keys = ['hevy_theme','hevy_dark','hevy_units','hevy_custom_ex','hevy_legend_mode',
+                   'hevy_setup_dur','hevy_rest_dur','hevy_tag_map','hevy_cal_v3','hevy_cal_map'];
+    keys.forEach(k => { try { localStorage.removeItem(k); } catch(_) {} });
+    // Delete Firebase account
+    await window._fbUser.delete();
+    // onAuthStateChanged will redirect to auth
+  } catch(e) {
+    // If re-auth required
+    if (e.code === 'auth/requires-recent-login') {
+      showAuthOverlay();
+      authSetError('Please sign in again before deleting your account.');
+    }
+  }
+}
+
+// ── Update profile UI ─────────────────────────────
+function updateProfileUI(user) {
+  if (!user) return;
+  const name  = user.displayName || user.email.split('@')[0];
+  const letter = name.charAt(0).toUpperCase();
+  const handle = user.email ? '@' + user.email.split('@')[0] : '';
+
+  const avatarEl = document.getElementById('profile-avatar');
+  const nameEl   = document.getElementById('profile-name');
+  const handleEl = document.getElementById('profile-handle');
+  if (avatarEl) avatarEl.textContent = letter;
+  if (nameEl)   nameEl.textContent   = name;
+  if (handleEl) handleEl.textContent = handle + ' · 🔥 PRO';
+}
+
+// ── Tab Transition Animations ─────────────────────
+const _origSwitchTab = window.switchTab;
+window.switchTab = function(tab) {
+  const prev = document.querySelector('.screen:not([style*="display: none"])');
+  if (prev && !prev.classList.contains('tab-exit')) {
+    prev.classList.add('tab-exit');
+    setTimeout(() => { prev.classList.remove('tab-exit'); }, 220);
+  }
+  if (_origSwitchTab) _origSwitchTab(tab);
+  setTimeout(() => {
+    const next = document.getElementById('tab-' + tab);
+    if (next) {
+      next.classList.remove('tab-enter');
+      void next.offsetWidth;
+      next.classList.add('tab-enter');
+    }
+  }, 10);
+};
+
+// ── Export Workouts (JSON) ─────────────────────────
+function exportWorkouts() {
+  try {
+    const cal = localStorage.getItem('hevy_cal_v3');
+    const data = cal ? JSON.parse(cal) : [];
+    const blob = new Blob([JSON.stringify({version:3, workouts:data, exported: new Date().toISOString()}, null, 2)],
+                          {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'rep-legend-workouts-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showVoiceToast('✅ Workouts exported!', 2500);
+  } catch(e) {
+    showVoiceToast('❌ Export failed', 2000);
+  }
+}
+
+// ── Export Measurements (CSV) ──────────────────────
+function exportMeasurements() {
+  try {
+    const cal = localStorage.getItem('hevy_cal_v3');
+    const workouts = cal ? JSON.parse(cal) : [];
+    // Build CSV from workout volume data
+    const rows = [['Date','Exercise','Sets','Reps','Weight(kg)','Volume']];
+    workouts.forEach(w => {
+      const date = w.date || w.ts || '';
+      (w.exercises || []).forEach(ex => {
+        (ex.sets || []).forEach(s => {
+          rows.push([date, ex.name||'', s.setNum||1, s.reps||0, s.weight||0, ((s.reps||0)*(s.weight||0)).toFixed(1)]);
+        });
+      });
+    });
+    const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'rep-legend-data-' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showVoiceToast('✅ Data exported as CSV!', 2500);
+  } catch(e) {
+    showVoiceToast('❌ Export failed', 2000);
+  }
+}
+
+// ── Import Workouts ────────────────────────────────
+function importWorkouts(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      let workouts = [];
+      if (Array.isArray(data)) {
+        workouts = data;
+      } else if (data.workouts && Array.isArray(data.workouts)) {
+        workouts = data.workouts;
+      } else {
+        showVoiceToast('❌ Invalid file format', 2500); return;
+      }
+      // Merge with existing (avoid duplicates by date+time)
+      let existing = [];
+      try { existing = JSON.parse(localStorage.getItem('hevy_cal_v3') || '[]'); } catch(_) {}
+      const existingKeys = new Set(existing.map(w => w.date + '_' + (w.ts||'') + '_' + (w.name||'')));
+      const toAdd = workouts.filter(w => !existingKeys.has(w.date + '_' + (w.ts||'') + '_' + (w.name||'')));
+      const merged = [...existing, ...toAdd].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+      localStorage.setItem('hevy_cal_v3', JSON.stringify(merged));
+      showVoiceToast(`✅ Imported ${toAdd.length} workout(s)!`, 3000);
+      // Reset file input
+      event.target.value = '';
+      // Trigger UI refresh if available
+      if (typeof loadHistory === 'function') loadHistory();
+      if (typeof renderCalendar === 'function') renderCalendar();
+    } catch(err) {
+      showVoiceToast('❌ Could not read file', 2500);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Auth State Listener (main entry point) ─────────
+fbAuth.onAuthStateChanged(function(user) {
+  window._fbUser = user;
+  if (user) {
+    // Signed in
+    hideSplash();
+    hideAuthOverlay();
+    updateProfileUI(user);
+    renderThemePicker();
+  } else {
+    // Not signed in
+    hideSplash();
+    showAuthOverlay();
+  }
+});
+
+// Fallback: hide splash after 2.5s even if Firebase is slow
+setTimeout(() => {
+  const splash = document.getElementById('splash-screen');
+  if (splash && !splash.classList.contains('hide')) hideSplash();
+}, 2500);
+
+// Enter key support on auth inputs
+document.addEventListener('DOMContentLoaded', () => {
+  ['auth-email','auth-password','auth-password-confirm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') authHandleCTA(); });
+  });
+});
+</script>
 
 </body>
 </html>
