@@ -1,0 +1,15 @@
+# Rep Legend — Cloudflare Worker config
+# Deploy: wrangler deploy (from this folder)
+# Secret: wrangler secret put RL_SECRET
+
+name = "rep-legend-ai"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+[ai]
+binding = "AI"
+
+# Worker is deployed to:
+# https://rep-legend-ai.<your-subdomain>.workers.dev
+# OR custom route after domain is added to Cloudflare:
+# routes = [{ pattern = "api.replegend.com/ai/*", zone_name = "replegend.com" }]
