@@ -1,5 +1,6 @@
 [build]
   publish = "deploy"
+  command = ""
 
 # No build command needed — we ship pre-built static files
 

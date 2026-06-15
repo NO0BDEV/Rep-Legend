@@ -138,9 +138,9 @@
   <div class="nav-links">
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
-    <a href="rep-legend-app.html">Open App</a>
+    <a href="app/index.html">Open App</a>
   </div>
-  <a class="btn btn-acc" href="auth.html?mode=signup">Get Started Free</a>
+  <a class="btn btn-acc" href="signup.html">Get Started Free</a>
 </nav>
 
 <section class="hero">
@@ -152,7 +152,7 @@
   <h1 class="hero-title">Your phone counts reps.<br>You become a <span class="hl">Legend.</span></h1>
   <p class="hero-sub">Mount your phone. Lift. Auto-Rep counts every rep using your phone's motion sensor — no wearable, no tapping, no distraction.</p>
   <div class="hero-btns">
-    <a class="btn btn-acc btn-lg" href="auth.html?mode=signup">Start for Free</a>
+    <a class="btn btn-acc btn-lg" href="signup.html">Start for Free</a>
     <a class="btn btn-ghost" href="#pricing">See Plans</a>
   </div>
   <div class="hero-proof">
@@ -519,7 +519,7 @@
       <div class="pc-price">$0</div>
       <div class="pc-period">forever</div>
       <div class="pc-note"></div>
-      <a class="pc-btn gl" href="auth.html?mode=signup">Start for Free</a>
+      <a class="pc-btn gl" href="signup.html">Start for Free</a>
       <div class="pc-div"></div>
       <ul class="pc-feats">
         <li class="on"><span class="ck">✓</span> Unlimited workout logging</li>
@@ -541,7 +541,7 @@
       <div class="pc-price acc" id="pro-p">$4.99</div>
       <div class="pc-period" id="pro-per">per month</div>
       <div class="pc-note" id="pro-note"></div>
-      <a class="pc-btn acc" href="auth.html?mode=signup&next=checkout.html%3Fplan%3Dpro" id="pro-cta">Get Pro</a>
+      <a class="pc-btn acc" href="checkout.html" id="pro-cta">Get Pro</a>
       <div class="pc-div"></div>
       <ul class="pc-feats">
         <li class="on"><span class="ck">✓</span> Everything in Free</li>
@@ -562,7 +562,7 @@
       <div class="pc-price" id="elite-p">$9.99</div>
       <div class="pc-period" id="elite-per">per month</div>
       <div class="pc-note" id="elite-note"></div>
-      <a class="pc-btn gl" href="auth.html?mode=signup&next=checkout.html%3Fplan%3Delite" id="elite-cta">Get Elite</a>
+      <a class="pc-btn gl" href="checkout.html" id="elite-cta">Get Elite</a>
       <div class="pc-div"></div>
       <ul class="pc-feats">
         <li class="on"><span class="ck">✓</span> Everything in Pro</li>
@@ -605,7 +605,7 @@
   <div class="cta-band-glow"></div>
   <h2>Ready to become a Rep Legend?</h2>
   <p>Start free — no account, no credit card. Your first rep is one tap away.</p>
-  <a class="btn btn-acc" href="rep-legend-app.html" style="padding:18px 48px;border-radius:999px;font-size:17px;font-weight:700">Launch the App →</a>
+  <a class="btn btn-acc" href="app/index.html" style="padding:18px 48px;border-radius:999px;font-size:17px;font-weight:700">Launch the App →</a>
 </div>
 
 <footer>
@@ -617,7 +617,7 @@
     <a href="/app">Privacy</a>
     <a href="/app">Terms</a>
     <a href="/app">Support</a>
-    <a href="rep-legend-app.html">Open App</a>
+    <a href="app/index.html">Open App</a>
   </div>
   <div>© 2026 Rep Legend</div>
 </footer>
@@ -638,8 +638,8 @@ function setBilling(b) {
   document.getElementById('elite-p').textContent = p.elite;
   document.getElementById('elite-per').textContent = p.period;
   document.getElementById('elite-note').textContent = p.eliteNote;
-  document.getElementById('pro-cta').href = 'auth.html?mode=signup&next=checkout.html%3Fplan%3Dpro%26billing%3D' + b;
-  document.getElementById('elite-cta').href = 'auth.html?mode=signup&next=checkout.html%3Fplan%3Delite%26billing%3D' + b;
+  document.getElementById('pro-cta').href = 'checkout.html';
+  document.getElementById('elite-cta').href = 'checkout.html';
 }
 </script>
 </body>
