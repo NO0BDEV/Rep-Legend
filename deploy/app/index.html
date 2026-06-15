@@ -729,8 +729,9 @@ textarea { resize: none; min-height: 80px; }
 #rep-counter-overlay .rc-title .beta { font-size: 8px; vertical-align: 2px; margin-left: 6px; color: #BF5AF2; border: 1px solid rgba(191,90,242,0.4); border-radius: 4px; padding: 1px 5px; letter-spacing: .08em; }
 #rep-counter-overlay .rc-sub, .rc-logsub { font-size: 11px; font-weight: 800; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
 .rc-close { background: var(--glass-light); border: 1px solid var(--glass-border); border-radius: 50%; width: 34px; height: 34px; color: var(--text2); font-size: 14px; cursor: pointer; font-family: inherit; }
-.rc-phase { flex: 1; display: none; flex-direction: column; min-height: 0; }
+.rc-phase { flex: 1; display: none; flex-direction: column; min-height: 0; position: relative; }
 .rc-phase.active { display: flex; }
+#rc-phase-rest > *:not(#rc-rest-bg) { position: relative; z-index: 1; }
 .rc-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 28px; text-align: center; }
 .rc-controls { padding: 0 24px calc(24px + var(--safe-bot)); display: flex; flex-direction: column; gap: 14px; align-items: center; flex-shrink: 0; }
 /* HIG button hierarchy: filled / tinted / plain (44pt+ targets) */
@@ -1687,6 +1688,11 @@ html.light-mode .pill.active      { background: rgba(255,107,53,0.15) !important
 
   <!-- REST -->
   <div class="rc-phase" id="rc-phase-rest">
+    <!-- Blurred machine photo background (shown when exercise has a saved photo) -->
+    <div id="rc-rest-bg" style="display:none;position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:inherit">
+      <div id="rc-rest-bg-img" style="position:absolute;inset:-20px;background-size:cover;background-position:center;filter:blur(14px);transform:scale(1.08)"></div>
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0.55) 60%,rgba(0,0,0,0.78) 100%)"></div>
+    </div>
     <!-- Exercise name bar (visible when exercise is known) -->
     <div class="rc-rest-ex-bar" id="rc-rest-ex-bar" style="display:none">
       <div class="rc-rest-ex-icon" id="rc-rest-ex-icon"></div>
@@ -2719,20 +2725,215 @@ renderCalendar();
 // Calibration is disguised as the warm-up and runs until score >= 80.
 // 5s of stillness ends the set automatically.
 // ══════════════════════════════════════
+// 🆓 FREE FEATURE — Daily motivational quotes (200+)
+// Quote of the day is seeded by calendar date — same day, same quote.
 const RC_QUOTES = [
+  // ── Push Through ──
   "You're not tired. You're just between reps.",
   "The weight doesn't know how many sets you've done.",
+  "Pain is the feeling of weakness leaving the body.",
+  "You didn't come this far to only come this far.",
+  "When your body says stop, your mind says one more.",
+  "Champions don't quit. They just get back up.",
+  "Suffer the pain of discipline or the pain of regret.",
+  "It never gets easier. You just get stronger.",
+  "Push harder than yesterday if you want a different tomorrow.",
+  "Your future self is watching. Make them proud.",
+  "The iron never lies to you.",
+  "Embrace the burn. It's just progress talking.",
+  "Comfort zones produce comfortable mediocrity.",
+  "Every rep is a vote for the person you want to become.",
+  "Fatigue makes cowards of us all — don't let it win.",
+  "The last three reps are the ones that change your body.",
+  "Don't stop when you're tired. Stop when you're done.",
+  "Your only limit is the one you set yourself.",
+  "The gym doesn't care how you feel. It rewards who shows up.",
+  "Sweat now. Shine later.",
+  // ── Consistency & Habit ──
+  "Consistency is the only thing that compounds.",
+  "The person who shows up beats the person who doesn't. Every time.",
+  "Small improvements are still improvements.",
+  "Motivation gets you started. Habit keeps you going.",
+  "Show up even on the days you don't want to. Especially those days.",
+  "Success isn't owned. It's rented, and the rent is due every day.",
+  "Discipline is choosing between what you want now and what you want most.",
+  "You don't rise to the level of your goals. You fall to the level of your systems.",
+  "The secret to getting ahead is getting started.",
+  "Results are rented, not owned. Keep paying.",
+  "Ninety percent of success is showing up.",
+  "One workout at a time. One day at a time. One rep at a time.",
+  "Brick by brick. Rep by rep.",
+  "The body achieves what the mind believes.",
+  "It's not about perfect. It's about effort. And when you bring that every day, that's where transformation happens.",
+  "Small daily improvements lead to stunning long-term results.",
+  "You are what you repeatedly do. Excellence is a habit.",
+  "Fall seven times. Get up eight.",
+  "The strongest people aren't those who show strength in front of us but those who win battles we know nothing about.",
+  "Earn your rest. Then use it.",
+  // ── Mental Strength ──
+  "The mind is the athlete. The body is simply the means.",
+  "What hurts today makes you stronger tomorrow.",
+  "Control the controllables. Everything else is noise.",
+  "Tough times never last, but tough people do.",
+  "Your body can handle almost anything. It's your mind you have to convince.",
+  "The biggest battle is the one between the ears.",
+  "Doubt kills more dreams than failure ever will.",
+  "Mental strength is built in the moments you want to quit most.",
+  "The will to win means nothing without the will to prepare.",
+  "Pressure is a privilege.",
+  "Elite performance is 90% mental. The physical is just the stage.",
+  "Fear is just excitement without breath.",
+  "You are braver than you believe, stronger than you seem.",
+  "Resilience is knowing that you are the only one that has the power to pick yourself up.",
+  "Hard work beats talent when talent doesn't work hard.",
+  "Believe in yourself even when no one else does. Especially then.",
+  "Champions aren't made in gyms. Champions are made from something they have deep inside — a desire, a dream, a vision.",
+  "Pain is temporary. Quitting is forever.",
+  "The more you sweat in training, the less you bleed in battle.",
+  "You have to expect things of yourself before you can do them.",
+  // ── Rest & Recovery ──
   "Rest is where strength is built. You're building right now.",
   "Every elite athlete takes their rest seriously.",
   "Your muscles are growing. You're just watching.",
-  "Consistency is the only thing that compounds.",
-  "The person who shows up beats the person who doesn't. Every time.",
-  "Discomfort today. Strength tomorrow.",
-  "You came here when you didn't have to. That's rare.",
   "Progress is made in the rest, not just the rep.",
+  "Recovery is not a reward. It's part of the work.",
+  "Rest is not idleness. It's when your body earns the gains.",
+  "Slow down to speed up.",
+  "The rest between sets is when the magic happens.",
+  "Breathe. Reset. Go again.",
+  "Tension builds strength. Rest builds muscle.",
+  "Your body is repairing right now. Let it work.",
+  "The comeback is always stronger than the setback.",
+  "Rest with intention. Return with power.",
+  "Elite athletes obsess over recovery as much as training.",
+  "Between every storm of effort is a harbor of rest. Use it.",
+  "This moment of stillness is part of the process.",
+  "The pause before the next push is where resilience is forged.",
+  "Let the oxygen do its work.",
+  "Recovery is an act of discipline, not weakness.",
+  "Between reps, your body is already preparing its next masterpiece.",
+  // ── You Showed Up ──
   "The hardest part was walking in. You already did that.",
-  "Small improvements are still improvements.",
+  "You came here when you didn't have to. That's rare.",
+  "The fact that you're here says everything.",
+  "Showing up on the hard days is what separates you.",
+  "Most people are still in bed. You're already winning.",
+  "Every session you complete is one your future self will thank you for.",
+  "You traded excuses for effort today. That's everything.",
+  "No one who ever showed up for themselves regretted it.",
+  "You made time for what matters. That's character.",
+  "Today you chose progress over comfort. That's not small.",
+  "You could have stayed home. You didn't.",
+  "Every time you show up, you prove something to yourself.",
+  "The version of you that stays home never wins. You chose not to be that person.",
+  "You walked through the door. The hardest rep is always the first.",
+  "You earned the right to be here. Honor it.",
+  // ── Focus & Mindset ──
+  "One more rep won't kill you. Quitting might.",
+  "Don't watch the clock. Do what it does. Keep going.",
+  "Focus on the process. The results will follow.",
+  "Stop thinking. Start doing. Adjust later.",
+  "Where focus goes, energy flows.",
+  "The goal is not to be better than others. It's to be better than yesterday.",
+  "Zero in on the rep in front of you.",
+  "Don't compare your chapter 1 to someone else's chapter 20.",
+  "Compete with who you were yesterday.",
+  "The only bad workout is the one that didn't happen.",
+  "Train like you're preparing for something incredible.",
+  "See it. Believe it. Achieve it.",
+  "Focus is the superpower the gym reveals.",
+  "This set. This rep. This breath. Nothing else.",
+  "Clarity of purpose turns effort into momentum.",
+  "Quiet the noise. Lock in.",
+  "What you do when no one's watching defines who you are.",
+  "Winners focus on what they're going toward, not what they're leaving behind.",
+  "Excellence demands total attention. Give it.",
+  "Be where your feet are.",
+  // ── Transformation ──
+  "Discomfort today. Strength tomorrow.",
+  "You are building the body that will carry your ambitions.",
+  "Every drop of sweat is an investment in a better version of you.",
+  "Transformation is not a future event. It's a present activity.",
+  "The person who started this journey would be amazed by who you're becoming.",
+  "The only way out is through.",
+  "You're not who you were when you started. Keep going.",
+  "Real change requires real work. You're doing real work.",
+  "Be patient. Great things take time.",
+  "Your body is a reflection of your commitment.",
+  "You are carving your best self, one rep at a time.",
+  "The version of you that completes this workout is already stronger.",
+  "Progress doesn't announce itself. It just quietly shows up.",
+  "Six months from now you'll wish you started today. You did.",
+  "Eat well. Train hard. Rest deep. Repeat.",
+  "Every scar of effort is a story of growth.",
+  "The grind is the gift. The process is the reward.",
+  "You're not just training your body. You're training your character.",
+  "The best time to plant a tree was 20 years ago. The second best time is now.",
+  "Change happens at the edge of your comfort zone.",
+  // ── Grit & Champions ──
+  "Grit is the difference between good and legendary.",
+  "Champions do the work when no one is clapping.",
+  "Talent is given. Greatness is earned.",
+  "Elite isn't an accident. It's a decision made daily.",
+  "The harder the battle, the sweeter the victory.",
+  "Legends aren't born. They're built — one rep at a time.",
+  "Be so good they can't ignore you.",
+  "Work hard in silence. Let success make the noise.",
+  "Ordinary people dream of success. Warriors wake up and earn it.",
+  "The grinder always outlasts the gifted.",
+  "Gold medals are made out of hard work.",
+  "Outwork everybody.",
+  "The only shortcut is the long way.",
+  "On the other side of your greatest fear is your greatest strength.",
+  "Every champion was once a beginner who refused to give up.",
+  "The top is lonely. The work to get there is your company.",
+  "Bleed in training so you don't bleed in battle.",
+  "Run toward hard things. That's where you grow.",
+  "Winners are just losers who got back up.",
+  "Be the hardest worker in every room you enter.",
+  // ── Science of Muscle ──
+  "Muscles don't grow during the set. They grow during recovery.",
+  "Progressive overload is the only cheat code.",
+  "Adaptation begins where comfort ends.",
+  "Your CNS is being tuned right now. Rest lets it lock in.",
+  "Protein synthesis peaks in rest. You're building.",
+  "The superset is done. Now let the supercharger run.",
+  "Every micro-tear is a future micro-gain.",
+  "The body doesn't care about motivation. It responds to stimulus.",
+  "Volume, intensity, rest. The trinity of gains.",
+  "Glycogen is refueling. Lactate is clearing. Keep breathing.",
+  "Cortisol drops in stillness. Growth hormone rises. That's science.",
+  "Aerobic recovery between sets is real. This breath matters.",
+  "Your nervous system is as trainable as your muscles.",
+  "Muscle memory is being written right now.",
+  "Eat the rep, digest the rest, grow on repeat.",
+  // ── Short Punches ──
+  "Make it count.",
+  "One more.",
+  "Not yet.",
+  "Stay in it.",
+  "The work is the answer.",
+  "Keep going.",
+  "You've got this.",
+  "Lock in.",
+  "Trust the process.",
+  "Do the work.",
+  "Level up.",
+  "No shortcuts.",
+  "Earn it.",
+  "Rise.",
+  "More.",
+  "Breathe and go.",
+  "Stay hungry.",
+  "Own it.",
+  "Refuse to quit.",
+  "Built, not born.",
 ];
+// Date-seed helper — same calendar day returns same starting index (FREE feature)
+(function() {
+  const _d = new Date(); const _seed = _d.getFullYear() * 10000 + (_d.getMonth()+1) * 100 + _d.getDate();
+  window._rcDailySeed = _seed % RC_QUOTES.length;
+})();
 const RC_SCORE_LIVE = 80;        // calibration locks in at this score
 const RC_STILL_MS   = 5000;      // stillness window that ends a set
 const RC_MIN_GAP    = 600;       // hard floor between reps (ms)
@@ -2768,7 +2969,7 @@ let rcWakeLock = null, rcAudioCtx = null, rcNfcAbort = null, rcNfcOn = false;
 let rcSetupT = null, rcSetupLeft = 0;
 let rcTickT = null, rcConfirmT = null;
 let rcRestT = null, rcRestStart = 0, rcQuoteT = null, rcQuoteWordT = null;
-let rcQuoteIdx = Math.floor(Math.random() * RC_QUOTES.length);
+let rcQuoteIdx = window._rcDailySeed || 0; // date-seeded: same day = same quote sequence
 
 // ── detector state (motion path) ──
 const D = {
@@ -2887,6 +3088,7 @@ function rcStopAllTimers() {
   clearInterval(rcSetupT); clearInterval(rcTickT); clearTimeout(rcConfirmT);
   clearInterval(rcRestT); clearTimeout(rcQuoteT); clearInterval(rcQuoteWordT);
   clearTimeout(rcGhostT); rcGhost = false;
+  rcUpdateRestBg(null); // clear photo background when leaving rest
 }
 
 // ── phases ──
@@ -3144,6 +3346,20 @@ function rcCommitSet(exId, kg) {
   renderExBlocks();
 }
 
+// ── REST background photo helper ──
+function rcUpdateRestBg(photoData) {
+  const bg = rcEl('rc-rest-bg');
+  const img = rcEl('rc-rest-bg-img');
+  if (!bg || !img) return;
+  if (photoData) {
+    img.style.backgroundImage = 'url(' + photoData + ')';
+    bg.style.display = '';
+  } else {
+    bg.style.display = 'none';
+    img.style.backgroundImage = '';
+  }
+}
+
 // ── REST: 4-7-8 breathing radiates ──
 function rcStartRest() {
   rcRestStart = Date.now();
@@ -3154,6 +3370,10 @@ function rcStartRest() {
   rcRestTick();
   rcQuoteT = setTimeout(rcShowQuote, 19000);
   rcSetBreathMode(rcBreathMode); // sync buttons + segment bars to saved mode
+
+  // Machine photo background
+  const _bgEx = rcCurExId ? window.CUSTOM_EX.find(e => e.id === rcCurExId) : null;
+  rcUpdateRestBg(_bgEx && _bgEx.photo ? _bgEx.photo : null);
 
   // Exercise bar (top)
   const _exBar = rcEl('rc-rest-ex-bar');
@@ -3277,6 +3497,9 @@ function rcRestPickEx(exId) {
   _exBar.style.display = '';
   rcEl('rc-rest-ex-name').textContent = _xd ? _xd.name : 'Exercise';
   rcEl('rc-rest-ex-icon').innerHTML = _xd ? exIcon(_xd, 16) : '';
+  // Update blurred background photo
+  const _bgEx = window.CUSTOM_EX.find(e => e.id === exId);
+  rcUpdateRestBg(_bgEx && _bgEx.photo ? _bgEx.photo : null);
 }
 
 // "Skip for now" in drawer
