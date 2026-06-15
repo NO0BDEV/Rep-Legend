@@ -1,0 +1,7 @@
+# Rep Legend routing
+/app      /app/index.html     200
+/app/     /app/index.html     200
+/social   /social/index.html  200
+/social/  /social/index.html  200
+/auth     /auth.html          200
+/checkout /checkout.html      200

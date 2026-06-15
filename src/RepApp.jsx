@@ -1,0 +1,1177 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// ─────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────
+const PHASES = {
+  ONBOARDING:   "onboarding",
+  IGNITION:     "ignition",
+  CALIBRATION:  "calibration",
+  ACTIVE:       "active",
+  REST:         "rest",
+  LOG_EXERCISE: "log_exercise",
+  REVEAL:       "reveal",
+  HISTORY:      "history",
+};
+
+const PHASE_TINT = {
+  onboarding:   "rgba(0,0,0,0)",
+  ignition:     "rgba(0,0,0,0)",
+  calibration:  "rgba(30,0,80,0.18)",
+  active:       "rgba(0,0,0,0.45)",
+  rest:         "rgba(10,20,60,0.35)",
+  log_exercise: "rgba(0,0,0,0.1)",
+  reveal:       "rgba(0,0,0,0)",
+  history:      "rgba(0,0,0,0.1)",
+};
+
+const QUOTES = [
+  "You're not tired. You're just between reps.",
+  "The weight doesn't know how many sets you've done.",
+  "Rest is where strength is built. You're building right now.",
+  "Every elite athlete takes their rest seriously.",
+  "Your muscles are growing. You're just watching.",
+  "Consistency is the only thing that compounds.",
+  "The person who shows up beats the person who doesn't. Every time.",
+  "Discomfort today. Strength tomorrow.",
+  "You came here when you didn't have to. That's rare.",
+  "Progress is made in the rest, not just the rep.",
+  "The hardest part was walking in. You already did that.",
+  "Small improvements are still improvements.",
+];
+
+const EXERCISES = [
+  "Bench Press","Incline Bench Press","Dumbbell Fly","Push-up",
+  "Squat","Front Squat","Goblet Squat","Leg Press","Lunges","Step-up",
+  "Deadlift","Romanian Deadlift","Hip Thrust","Good Morning",
+  "Pull-up","Chin-up","Lat Pulldown","Seated Cable Row","Dumbbell Row",
+  "Overhead Press","Arnold Press","Lateral Raise","Front Raise","Face Pull",
+  "Bicep Curl","Hammer Curl","Preacher Curl",
+  "Tricep Pushdown","Skull Crusher","Dip",
+  "Plank","Ab Wheel","Leg Raise","Cable Crunch","Crunch",
+  "Calf Raise","Leg Curl","Leg Extension",
+];
+
+const GRADE_COLORS = {
+  "A+": "#FF6B35", A: "#FF6B35",
+  "B+": "#30D158", B: "#30D158",
+  "C+": "#0A84FF", C: "#0A84FF",
+  D: "#FF453A",   F: "#FF453A",
+};
+const GRADE_SEQUENCE = ["F","D","C","C+","B","B+","A","A+"];
+const MACHINE_SENSITIVITY = 0.55;
+
+// ─────────────────────────────────────────
+// DESIGN TOKENS
+// ─────────────────────────────────────────
+const T = {
+  accent:       "#FF6B35",
+  accentDim:    "rgba(255,107,53,0.2)",
+  accentBorder: "rgba(255,107,53,0.35)",
+  accentGlow:   "0 6px 28px rgba(255,107,53,0.4)",
+  glass:        "rgba(255,255,255,0.07)",
+  glassMed:     "rgba(255,255,255,0.12)",
+  glassBorder:  "rgba(255,255,255,0.14)",
+  glassBorderB: "rgba(0,0,0,0.18)",
+  text:         "rgba(255,255,255,0.95)",
+  text2:        "rgba(255,255,255,0.55)",
+  text3:        "rgba(255,255,255,0.28)",
+  green:        "#30D158",
+  blue:         "#0A84FF",
+  red:          "#FF453A",
+  purple:       "#BF5AF2",
+  radius:       "20px",
+  radiusSm:     "12px",
+  radiusMd:     "16px",
+  radiusXl:     "28px",
+  radiusPill:   "999px",
+  fontFamily:   "'Figtree', -apple-system, 'SF Pro Display', system-ui, sans-serif",
+};
+
+const glass = (extra = {}) => ({
+  background: T.glass,
+  backdropFilter: "blur(24px) saturate(170%)",
+  WebkitBackdropFilter: "blur(24px) saturate(170%)",
+  border: `1px solid ${T.glassBorder}`,
+  borderBottom: `1px solid ${T.glassBorderB}`,
+  boxShadow: "0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1)",
+  borderRadius: T.radius,
+  position: "relative",
+  overflow: "hidden",
+  ...extra,
+});
+
+const pill = (active = false, extra = {}) => ({
+  padding: "9px 18px",
+  borderRadius: T.radiusPill,
+  border: active ? `1px solid ${T.accentBorder}` : `1px solid ${T.glassBorder}`,
+  background: active ? T.accentDim : T.glass,
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  color: active ? T.accent : T.text2,
+  fontSize: 14, fontWeight: 600, cursor: "pointer",
+  fontFamily: T.fontFamily,
+  boxShadow: active ? T.accentGlow : "none",
+  transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)",
+  ...extra,
+});
+
+const btnPrimary = (extra = {}) => ({
+  width: "100%", padding: 16,
+  background: `linear-gradient(135deg, ${T.accent}, #FF8C5A)`,
+  border: "none", borderRadius: T.radius,
+  color: "#fff", fontSize: 16, fontWeight: 700,
+  cursor: "pointer", fontFamily: T.fontFamily,
+  boxShadow: T.accentGlow,
+  position: "relative", overflow: "hidden",
+  transition: "transform 0.15s",
+  ...extra,
+});
+
+const btnGlass = (extra = {}) => ({
+  width: "100%", padding: 15,
+  background: T.glass,
+  backdropFilter: "blur(20px)",
+  WebkitBackdropFilter: "blur(20px)",
+  border: `1px solid ${T.glassBorder}`,
+  borderRadius: T.radius,
+  color: T.text2, fontSize: 15, fontWeight: 600,
+  cursor: "pointer", fontFamily: T.fontFamily,
+  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
+  transition: "all 0.2s",
+  ...extra,
+});
+
+// ─────────────────────────────────────────
+// HOOKS
+// ─────────────────────────────────────────
+function useWakeLock() {
+  const ref = useRef(null);
+  const acquire = async () => {
+    try { if ("wakeLock" in navigator) ref.current = await navigator.wakeLock.request("screen"); } catch (_) {}
+  };
+  const release = () => { if (ref.current) { ref.current.release(); ref.current = null; } };
+  return { acquire, release };
+}
+
+function useHaptic() {
+  const audioRef = useRef(null);
+  const pulse = useCallback((ms = 10) => {
+    if (navigator.vibrate) { navigator.vibrate(ms); return; }
+    try {
+      if (!audioRef.current) audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioRef.current;
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + ms / 1000);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + ms / 1000);
+    } catch (_) {}
+  }, []);
+  return { pulse };
+}
+
+// ─────────────────────────────────────────
+// AI MACHINE IDENTIFIER
+// ─────────────────────────────────────────
+async function identifyMachine(base64Image, apiKey) {
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 300,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: { type: "base64", media_type: "image/jpeg", data: base64Image },
+          },
+          {
+            type: "text",
+            text: `You are a gym equipment expert. Look at this gym machine/equipment photo.
+Return ONLY a JSON object (no markdown, no explanation) in this exact format:
+{
+  "machine": "Machine Name",
+  "confidence": "high|medium|low",
+  "exercises": ["Exercise 1", "Exercise 2", "Exercise 3", "Exercise 4", "Exercise 5"]
+}
+List the 3-6 most common exercises this machine is used for, ordered by popularity.
+If it's free weights or bodyweight, set machine to "Free Weights" or "Bodyweight".
+If you can't identify any gym equipment, set machine to null and exercises to [].`,
+          },
+        ],
+      }],
+    }),
+  });
+
+  if (!resp.ok) throw new Error(`API error ${resp.status}`);
+  const data = await resp.json();
+  const text = data.content?.[0]?.text ?? "{}";
+
+  // Strip any accidental markdown fences
+  const clean = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
+
+// ─────────────────────────────────────────
+// SUB-COMPONENTS
+// ─────────────────────────────────────────
+function GlassShine() {
+  return (
+    <div style={{
+      position: "absolute", top: 0, left: "8%", right: "8%", height: 1,
+      background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5) 30%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.5) 70%, transparent)",
+      borderRadius: "999px", pointerEvents: "none", zIndex: 1,
+    }} />
+  );
+}
+
+function GlossShimmer() {
+  return (
+    <div style={{
+      position: "absolute", inset: 0, pointerEvents: "none", borderRadius: "inherit",
+      background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%)",
+      backgroundSize: "200% 100%",
+      animation: "lgGlimmer 6s ease-in-out infinite",
+    }} />
+  );
+}
+
+function AnimatedQuote({ quote }) {
+  const [visible, setVisible] = useState(0);
+  const words = quote.split(" ");
+  useEffect(() => {
+    setVisible(0);
+    const id = setInterval(() => {
+      setVisible(v => { if (v >= words.length) { clearInterval(id); return v; } return v + 1; });
+    }, 175);
+    return () => clearInterval(id);
+  }, [quote]);
+  return (
+    <p style={{ fontSize: 16, lineHeight: 1.8, color: T.text2, textAlign: "center", maxWidth: 280, margin: "0 auto" }}>
+      {words.map((w, i) => (
+        <span key={i} style={{ opacity: i < visible ? 1 : 0, transition: "opacity 0.3s ease", marginRight: "0.28em" }}>{w}</span>
+      ))}
+    </p>
+  );
+}
+
+function BreathingTimer({ total, onComplete }) {
+  const [left, setLeft]       = useState(total);
+  const [elapsed, setElapsed] = useState(0);
+  const startRef              = useRef(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const e = Math.floor((Date.now() - startRef.current) / 1000);
+      setElapsed(e);
+      setLeft(Math.max(0, total - e));
+      if (e >= total) { clearInterval(id); onComplete(); }
+    }, 250);
+    return () => clearInterval(id);
+  }, [total]);
+
+  const cycle = elapsed % 19;
+  let phase, scale, color;
+  if (cycle < 4)       { phase = "breathe in";  scale = 1 + (cycle / 4) * 0.22; color = T.accent; }
+  else if (cycle < 11) { phase = "hold";         scale = 1.22; color = T.purple; }
+  else                 { phase = "breathe out";  scale = 1.22 - ((cycle - 11) / 8) * 0.26; color = T.blue; }
+
+  const mins = Math.floor(left / 60);
+  const secs = left % 60;
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{
+        width: 140, height: 140, borderRadius: "50%", margin: "0 auto 28px",
+        background: `radial-gradient(circle, ${color}25 0%, transparent 70%)`,
+        border: `1.5px solid ${color}40`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        transform: `scale(${scale})`,
+        transition: "transform 0.9s ease-in-out, background 1.2s ease, border-color 1.2s ease",
+        backdropFilter: "blur(8px)",
+      }}>
+        <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.1em", color, transition: "color 1.2s ease", textTransform: "lowercase" }}>{phase}</span>
+      </div>
+      <div style={{ fontSize: 44, fontWeight: 800, color: T.text, letterSpacing: "-1px" }}>
+        {mins}:{secs.toString().padStart(2, "0")}
+      </div>
+    </div>
+  );
+}
+
+function GradeReveal({ grade, xp, bonusXp, sets, totalReps, prevReps, onDone }) {
+  const [disp, setDisp]           = useState("?");
+  const [locked, setLocked]       = useState(false);
+  const [showXp, setShowXp]       = useState(false);
+  const [counted, setCounted]     = useState(0);
+  const [showBonus, setShowBonus] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showCta, setShowCta]     = useState(false);
+
+  const gradeIdx = GRADE_SEQUENCE.indexOf(grade);
+  const color    = GRADE_COLORS[grade] || T.blue;
+  const isBad    = ["D","F"].includes(grade);
+  const diff     = totalReps - prevReps;
+
+  useEffect(() => {
+    if (isBad) {
+      setTimeout(() => { setDisp(grade); setLocked(true); }, 400);
+      setTimeout(() => { setShowXp(true); setCounted(xp); }, 1000);
+      setTimeout(() => setShowStats(true), 2000);
+      setTimeout(() => setShowCta(true), 3000);
+      return;
+    }
+    let i = 0;
+    const spins = gradeIdx + 10;
+    const id = setInterval(() => {
+      setDisp(GRADE_SEQUENCE[i % GRADE_SEQUENCE.length]);
+      i++;
+      if (i > spins) {
+        clearInterval(id);
+        setDisp(grade); setLocked(true);
+        setTimeout(() => {
+          setShowXp(true);
+          let cur = 0;
+          const step = Math.max(1, Math.ceil(xp / 45));
+          const cnt = setInterval(() => {
+            cur = Math.min(cur + step, xp);
+            setCounted(cur);
+            if (cur >= xp) clearInterval(cnt);
+          }, 30);
+          setTimeout(() => { if (bonusXp > 0) setShowBonus(true); }, 1600);
+          setTimeout(() => setShowStats(true), bonusXp > 0 ? 2600 : 1800);
+          setTimeout(() => setShowCta(true),  bonusXp > 0 ? 4200 : 3200);
+        }, 700);
+      }
+    }, 70);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div style={{ textAlign: "center", padding: "32px 0" }}>
+      {isBad && (
+        <p style={{ fontSize: 14, color: T.text2, marginBottom: 24, marginTop: 0 }}>
+          You showed up. That's the hardest part.
+        </p>
+      )}
+      <div style={{
+        fontSize: "clamp(100px,30vw,150px)", fontWeight: 900,
+        letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 8,
+        color: locked ? color : T.text3,
+        textShadow: locked ? `0 0 60px ${color}60, 0 0 120px ${color}30` : "none",
+        transition: "color 0.4s ease, text-shadow 0.4s ease",
+        fontVariantNumeric: "tabular-nums",
+      }}>{disp}</div>
+
+      {showXp && (
+        <div style={{ marginBottom: 8, animation: "lgFadeUp 0.5s ease" }}>
+          <div style={{ fontSize: 42, fontWeight: 800, color: T.accent }}>+{counted}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: T.text3, textTransform: "uppercase" }}>xp earned</div>
+        </div>
+      )}
+
+      {showBonus && bonusXp > 0 && (
+        <div style={{
+          display: "inline-block", marginBottom: 24, marginTop: 8,
+          background: T.accentDim, border: `1px solid ${T.accentBorder}`,
+          borderRadius: T.radiusSm, padding: "8px 16px",
+          fontSize: 13, color: T.accent, animation: "lgFadeUp 0.5s ease",
+        }}>🔥 secret multiplier — +{bonusXp} xp</div>
+      )}
+
+      {showStats && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 28, marginTop: 20, animation: "lgFadeUp 0.5s ease" }}>
+          {[
+            { val: totalReps, label: "reps" },
+            { val: sets, label: "sets" },
+            ...(prevReps > 0 ? [{ val: (diff >= 0 ? "+" : "") + diff, label: "vs last", color: diff >= 0 ? T.green : T.blue }] : []),
+          ].map(({ val, label, color: c }) => (
+            <div key={label} style={{ ...glass({ padding: "14px 20px", borderRadius: T.radiusMd, flex: 1 }) }}>
+              <GlassShine />
+              <div style={{ fontSize: 28, fontWeight: 800, color: c || T.text }}>{val}</div>
+              <div style={{ fontSize: 11, color: T.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 3 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showStats && prevReps > 0 && (
+        <p style={{ fontSize: 14, color: T.text2, margin: "0 0 24px" }}>
+          {diff >= 0 ? `${diff} more reps than your last workout.` : `${Math.abs(diff)} fewer than your best. You're close.`}
+        </p>
+      )}
+
+      {showCta && (
+        <div style={{ marginTop: 8, animation: "lgFadeIn 1.2s ease" }}>
+          <p style={{ fontSize: 14, color: T.text2, marginBottom: 20 }}>same time next time?</p>
+          <button onClick={onDone} style={btnGlass()}>done</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────
+// CAMERA + AI EXERCISE PICKER
+// ─────────────────────────────────────────
+function MachineScan({ apiKey, onResult, onDismiss }) {
+  const [status, setStatus]     = useState("idle"); // idle | scanning | loading | done | error
+  const [preview, setPreview]   = useState(null);
+  const [result, setResult]     = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const fileRef                 = useRef(null);
+
+  const handleCapture = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target.result;
+      setPreview(dataUrl);
+      setStatus("loading");
+
+      try {
+        // Strip data URL prefix to get raw base64
+        const base64 = dataUrl.split(",")[1];
+        const data   = await identifyMachine(base64, apiKey);
+
+        if (!data.machine || data.exercises.length === 0) {
+          setErrorMsg("Couldn't identify gym equipment. Try another angle.");
+          setStatus("error");
+          return;
+        }
+
+        setResult(data);
+        setStatus("done");
+      } catch (err) {
+        setErrorMsg(err.message.includes("401") ? "Invalid API key." : "Scan failed. Check your connection.");
+        setStatus("error");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div style={{ ...glass({ padding: "20px", marginBottom: 12, borderRadius: T.radiusMd }) }}>
+      <GlassShine />
+      <div style={{ position: "relative", zIndex: 2 }}>
+
+        {/* Idle — camera trigger */}
+        {status === "idle" && (
+          <button
+            onClick={() => fileRef.current?.click()}
+            style={{
+              width: "100%", padding: "14px 16px",
+              background: "transparent", border: `1.5px dashed rgba(255,255,255,0.15)`,
+              borderRadius: T.radiusMd, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 10, color: T.text2, fontFamily: T.fontFamily,
+              fontSize: 15, fontWeight: 600,
+              transition: "border-color 0.2s, color 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = T.accentBorder; e.currentTarget.style.color = T.accent; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; e.currentTarget.style.color = T.text2; }}
+          >
+            <span style={{ fontSize: 20 }}>📷</span>
+            <span>Scan the machine</span>
+          </button>
+        )}
+
+        {/* Loading — preview + spinner */}
+        {(status === "loading" || status === "scanning") && (
+          <div style={{ textAlign: "center" }}>
+            {preview && (
+              <div style={{ position: "relative", marginBottom: 14 }}>
+                <img src={preview} alt="scan" style={{ width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: T.radiusSm, opacity: 0.6 }} />
+                <div style={{
+                  position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "rgba(0,0,0,0.4)", borderRadius: T.radiusSm,
+                }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{
+                      width: 40, height: 40, border: `3px solid ${T.accentBorder}`,
+                      borderTopColor: T.accent, borderRadius: "50%",
+                      animation: "lgSpin 0.8s linear infinite", margin: "0 auto 10px",
+                    }} />
+                    <div style={{ fontSize: 13, color: T.text2, fontWeight: 600 }}>Identifying machine…</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Done — show machine name + exercises */}
+        {status === "done" && result && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              {preview && (
+                <img src={preview} alt="scan" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10, flexShrink: 0 }} />
+              )}
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{result.machine}</div>
+                <div style={{ fontSize: 12, color: T.text3, marginTop: 2 }}>
+                  {result.confidence === "high" ? "✓ Identified with confidence" : result.confidence === "medium" ? "~ Possible match" : "? Low confidence"}
+                </div>
+              </div>
+              <button onClick={() => { setStatus("idle"); setPreview(null); setResult(null); }}
+                style={{ background: "none", border: "none", color: T.text3, fontSize: 18, cursor: "pointer", marginLeft: "auto" }}>✕</button>
+            </div>
+
+            <div style={{ fontSize: 11, color: T.text3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+              Exercises for this machine
+            </div>
+            {result.exercises.map(ex => (
+              <button key={ex} onClick={() => onResult(ex)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "11px 14px", marginBottom: 6,
+                  background: T.accentDim, border: `1px solid ${T.accentBorder}`,
+                  borderRadius: T.radiusSm, cursor: "pointer",
+                  color: T.text, fontSize: 14, fontWeight: 600,
+                  fontFamily: T.fontFamily, textAlign: "left",
+                  transition: "background 0.15s",
+                }}>
+                <span style={{ color: T.accent, fontSize: 16 }}>▸</span>
+                {ex}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Error */}
+        {status === "error" && (
+          <div style={{ textAlign: "center", padding: "8px 0" }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>⚠️</div>
+            <div style={{ fontSize: 14, color: T.text2, marginBottom: 14 }}>{errorMsg}</div>
+            <button onClick={() => { setStatus("idle"); setPreview(null); }} style={btnGlass({ padding: "10px 20px", width: "auto" })}>Try again</button>
+          </div>
+        )}
+
+        {/* Hidden file input — camera on mobile, file on desktop */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleCapture}
+          style={{ display: "none" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// API Key setup modal
+function ApiKeySetup({ onSave, onDismiss }) {
+  const [key, setKey] = useState("");
+  return (
+    <div style={{
+      position: "fixed", inset: 0,
+      background: "rgba(8,8,16,0.85)", backdropFilter: "blur(32px)", WebkitBackdropFilter: "blur(32px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 24, zIndex: 300, animation: "lgFadeIn 0.25s ease",
+    }}>
+      <div style={{ ...glass({ maxWidth: 320, width: "100%", padding: "32px 24px" }) }}>
+        <GlassShine /><GlossShimmer />
+        <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
+          <div style={{ fontSize: 36, marginBottom: 14 }}>🔑</div>
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: "0 0 10px" }}>Anthropic API Key</h3>
+          <p style={{ fontSize: 13, color: T.text2, lineHeight: 1.6, margin: "0 0 20px" }}>
+            Machine scanning uses Claude Vision. Your key is stored locally and never leaves your device.
+          </p>
+          <input
+            type="password"
+            placeholder="sk-ant-..."
+            value={key}
+            onChange={e => setKey(e.target.value)}
+            style={{
+              width: "100%", padding: "13px 16px", marginBottom: 12,
+              background: "rgba(255,255,255,0.07)", border: `1px solid ${T.glassBorder}`,
+              borderRadius: T.radiusMd, color: T.text, fontSize: 15,
+              outline: "none", fontFamily: T.fontFamily, boxSizing: "border-box",
+            }}
+          />
+          <button
+            onClick={() => key.startsWith("sk-") && onSave(key)}
+            style={btnPrimary({ marginBottom: 10, opacity: key.startsWith("sk-") ? 1 : 0.4 })}
+          >
+            <span style={{ position: "relative", zIndex: 1 }}>Save & Scan</span>
+          </button>
+          <button onClick={onDismiss} style={{ background: "none", border: "none", color: T.text3, fontSize: 13, cursor: "pointer", fontFamily: T.fontFamily }}>
+            skip for now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────
+// MAIN APP
+// ─────────────────────────────────────────
+export default function RepApp() {
+  const [phase, setPhase]             = useState(PHASES.ONBOARDING);
+  const [onbStep, setOnbStep]         = useState(0);
+  const [autoCount, setAutoCount]     = useState(false);
+  const [showAutoPrompt, setShowAutoPrompt] = useState(false);
+  const [calSet, setCalSet]           = useState(1);
+  const [calReps, setCalReps]         = useState(0);
+  const [calData, setCalData]         = useState(null);
+  const calSamples                    = useRef([]);
+  const isCalibrating                 = useRef(false);
+  const [activeReps, setActiveReps]   = useState(0);
+  const [currentSet, setCurrentSet]   = useState(1);
+  const [ghostRep, setGhostRep]       = useState(false);
+  const lastRepTime                   = useRef(0);
+  const cadenceHistory                = useRef([]);
+  const ghostTimeout                  = useRef(null);
+  const [restDuration, setRestDuration] = useState(90);
+  const [streak, setStreak]           = useState(0);
+  const [showStreak, setShowStreak]   = useState(false);
+  const [showQuote, setShowQuote]     = useState(false);
+  const [quoteIdx, setQuoteIdx]       = useState(0);
+  const [exQuery, setExQuery]         = useState("");
+  const [workout, setWorkout]         = useState([]);
+  const [history, setHistory]         = useState([]);
+  const [revealData, setRevealData]   = useState(null);
+
+  // Camera / AI state
+  const [apiKey, setApiKey]           = useState("");
+  const [showApiSetup, setShowApiSetup] = useState(false);
+  const [scanEnabled, setScanEnabled] = useState(false);
+
+  const { acquire, release } = useWakeLock();
+  const { pulse }            = useHaptic();
+
+  // Bootstrap
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("rep_onboarded")) setPhase(PHASES.IGNITION);
+      const h  = JSON.parse(localStorage.getItem("rep_history") || "[]");
+      setHistory(h);
+      const sd = JSON.parse(localStorage.getItem("rep_streak") || '{"count":0,"last":""}');
+      const today = new Date().toDateString();
+      const yest  = new Date(Date.now() - 86400000).toDateString();
+      if (sd.last === today || sd.last === yest) setStreak(sd.count);
+      const rd = localStorage.getItem("rep_rest");
+      if (rd) setRestDuration(+rd);
+      // Restore saved API key
+      const k = localStorage.getItem("rep_api_key");
+      if (k) { setApiKey(k); setScanEnabled(true); }
+    } catch (_) {}
+  }, []);
+
+  const saveApiKey = (k) => {
+    setApiKey(k); setScanEnabled(true);
+    try { localStorage.setItem("rep_api_key", k); } catch (_) {}
+    setShowApiSetup(false);
+  };
+
+  // iOS sensor permission
+  const requestSensor = async () => {
+    if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
+      try { const r = await DeviceMotionEvent.requestPermission(); return r === "granted"; } catch (_) { return false; }
+    }
+    return true;
+  };
+
+  // Calibration listener
+  useEffect(() => {
+    const handler = (e) => {
+      if (!isCalibrating.current) return;
+      const a = e.accelerationIncludingGravity;
+      if (a) calSamples.current.push(Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2));
+    };
+    window.addEventListener("devicemotion", handler);
+    return () => window.removeEventListener("devicemotion", handler);
+  }, []);
+
+  const computeThreshold = () => {
+    const s = calSamples.current;
+    if (!s.length) return 7;
+    const mean = s.reduce((a, b) => a + b, 0) / s.length;
+    const std  = Math.sqrt(s.reduce((a, b) => a + (b - mean) ** 2, 0) / s.length);
+    return (mean + std * 1.5) * MACHINE_SENSITIVITY;
+  };
+
+  const handleAutoRep = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRepTime.current < 380) return;
+    lastRepTime.current = now;
+    pulse(10);
+    setActiveReps(prev => {
+      if (cadenceHistory.current.length >= 2) {
+        const avg = cadenceHistory.current.reduce((a, b) => a + b, 0) / cadenceHistory.current.length;
+        clearTimeout(ghostTimeout.current);
+        ghostTimeout.current = setTimeout(() => {
+          setGhostRep(true);
+          setTimeout(() => setGhostRep(false), 180);
+        }, avg * 0.82);
+      }
+      return prev + 1;
+    });
+    if (lastRepTime.current > 0 && cadenceHistory.current.length > 0) {
+      cadenceHistory.current.push(now - lastRepTime.current);
+      if (cadenceHistory.current.length > 4) cadenceHistory.current.shift();
+    } else { cadenceHistory.current.push(0); }
+  }, [pulse]);
+
+  useEffect(() => {
+    if (phase !== PHASES.ACTIVE || !autoCount) return;
+    const threshold = calData?.threshold ?? 7;
+    const handler = (e) => {
+      const a = e.accelerationIncludingGravity;
+      if (!a) return;
+      const mag = Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2);
+      if (mag > threshold) handleAutoRep();
+    };
+    window.addEventListener("devicemotion", handler);
+    return () => window.removeEventListener("devicemotion", handler);
+  }, [phase, autoCount, calData, handleAutoRep]);
+
+  const handleManualRep = () => { pulse(10); setActiveReps(prev => prev + 1); lastRepTime.current = Date.now(); };
+
+  const getGrade = (total, prev) => {
+    if (!prev) return "B+";
+    const r = total / prev;
+    if (r >= 1.10) return "A+"; if (r >= 1.05) return "A";
+    if (r >= 1.00) return "B+"; if (r >= 0.95) return "B";
+    if (r >= 0.90) return "C+"; if (r >= 0.85) return "C";
+    if (r >= 0.75) return "D";  return "F";
+  };
+
+  const getXP = (sets, reps, str) => {
+    const base  = reps * 2 + str * 5 + (sets >= 3 ? 20 : 0);
+    const bonus = Math.random() < 0.2 ? 50 : 0;
+    return { base, bonus };
+  };
+
+  const goIgnition = () => {
+    setPhase(PHASES.IGNITION);
+    setWorkout([]); setCurrentSet(1); setActiveReps(0);
+    setCalSet(1); setCalReps(0); setCalData(null);
+    calSamples.current = []; cadenceHistory.current = [];
+    lastRepTime.current = 0; setAutoCount(false);
+  };
+
+  const handleReady = async () => {
+    await acquire();
+    setActiveReps(0); lastRepTime.current = 0; cadenceHistory.current = [];
+    setPhase(PHASES.ACTIVE);
+  };
+
+  const handleEnableAutoCount = async () => {
+    setShowAutoPrompt(false);
+    const granted = await requestSensor();
+    if (!granted) return;
+    calSamples.current = [];
+    setCalSet(1); setCalReps(0);
+    isCalibrating.current = true;
+    setPhase(PHASES.CALIBRATION);
+  };
+
+  const handleCalDone = () => {
+    isCalibrating.current = false;
+    if (calSet === 1) { setCalSet(2); setCalReps(0); setTimeout(() => { isCalibrating.current = true; }, 200); }
+    else {
+      const threshold = computeThreshold();
+      setCalData({ threshold }); setAutoCount(true);
+      setActiveReps(0); lastRepTime.current = 0; cadenceHistory.current = [];
+      setPhase(PHASES.ACTIVE);
+    }
+  };
+
+  const handleSetDone = () => {
+    if (activeReps === 0) return;
+    setWorkout(prev => [...prev, { reps: activeReps, set: currentSet, exercise: "" }]);
+    setQuoteIdx(q => (q + 1) % QUOTES.length);
+    setShowQuote(false); setShowStreak(false);
+    setTimeout(() => setShowStreak(true), 10000);
+    setTimeout(() => setShowQuote(true),  19000);
+    setPhase(PHASES.REST);
+  };
+
+  const handleContinue = () => {
+    setActiveReps(0); cadenceHistory.current = []; lastRepTime.current = 0;
+    setCurrentSet(s => s + 1); setExQuery("");
+    setPhase(PHASES.LOG_EXERCISE);
+  };
+
+  const handleExPicked = (name) => {
+    setWorkout(prev => {
+      const u = [...prev];
+      if (u.length) u[u.length - 1].exercise = name;
+      return u;
+    });
+    setPhase(PHASES.ACTIVE);
+  };
+
+  const handleEndWorkout = () => {
+    const total = workout.reduce((a, s) => a + s.reps, 0);
+    if (total === 0) { goIgnition(); return; }
+    const prev    = history[0]?.totalReps ?? 0;
+    const grade   = getGrade(total, prev);
+    const { base, bonus } = getXP(workout.length, total, streak);
+    const newStreak = streak + 1;
+    const record = { date: new Date().toISOString(), sets: workout, totalReps: total, grade, xp: base + bonus, streak: newStreak };
+    const newHistory = [record, ...history].slice(0, 60);
+    setHistory(newHistory);
+    try {
+      localStorage.setItem("rep_history", JSON.stringify(newHistory));
+      localStorage.setItem("rep_streak",  JSON.stringify({ count: newStreak, last: new Date().toDateString() }));
+    } catch (_) {}
+    setStreak(newStreak);
+    setRevealData({ grade, xp: base, bonusXp: bonus, sets: workout.length, totalReps: total, prevReps: prev });
+    release();
+    setPhase(PHASES.REVEAL);
+  };
+
+  const filtered = EXERCISES.filter(e => e.toLowerCase().includes(exQuery.toLowerCase()));
+  const tint     = PHASE_TINT[phase] || "rgba(0,0,0,0)";
+
+  const ONBOARDING = [
+    { icon: "🔲", title: "Tap to count each rep", sub: "Prop your phone on the machine and tap the screen once per rep. Simple, reliable, always accurate." },
+    { icon: "📲", title: "It faces you while you work", sub: "The counter is your visual tally. Rest timer and breathing guide come on automatically after each set." },
+    { icon: "⚡", title: "You're ready", sub: "Your data stays on your device. No account, no cloud, no tracking." },
+  ];
+
+  // ─────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────
+  return (
+    <div style={{
+      minHeight: "100vh", position: "relative", overflow: "hidden",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      padding: "24px",
+      fontFamily: T.fontFamily,
+      WebkitUserSelect: "none", userSelect: "none",
+    }}>
+      {/* ── BACKGROUND ── */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 0,
+        background: "radial-gradient(ellipse 80% 60% at 20% 10%, rgba(120,40,200,0.4) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 80%, rgba(30,100,200,0.35) 0%, transparent 55%), radial-gradient(ellipse 50% 40% at 60% 30%, rgba(255,107,53,0.14) 0%, transparent 50%), linear-gradient(160deg, #0A0A14 0%, #0F0A20 40%, #0A1020 100%)",
+      }}>
+        <div style={{ position:"absolute",width:380,height:380,borderRadius:"50%",background:"radial-gradient(circle,rgba(140,50,220,0.55),transparent)",top:-90,left:-70,filter:"blur(70px)",animation:"lgDrift1 18s ease-in-out infinite alternate"}} />
+        <div style={{ position:"absolute",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(30,120,220,0.5),transparent)",bottom:80,right:-60,filter:"blur(60px)",animation:"lgDrift2 22s ease-in-out infinite alternate"}} />
+        <div style={{ position:"absolute",width:220,height:220,borderRadius:"50%",background:"radial-gradient(circle,rgba(255,100,40,0.4),transparent)",top:"40%",left:"30%",filter:"blur(50px)",animation:"lgDrift3 15s ease-in-out infinite alternate"}} />
+      </div>
+
+      {/* Phase tint */}
+      <div style={{ position:"fixed",inset:0,zIndex:1,background:tint,transition:"background 0.9s ease",pointerEvents:"none" }} />
+
+      {/* Content */}
+      <div style={{ position:"relative",zIndex:2,width:"100%",maxWidth:380,display:"flex",flexDirection:"column",alignItems:"center" }}>
+
+        {/* BETA badge */}
+        <div style={{ position:"fixed",top:16,right:16,background:T.accentDim,border:`1px solid ${T.accentBorder}`,borderRadius:8,padding:"5px 12px",fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:T.accent,zIndex:99,textTransform:"uppercase",backdropFilter:"blur(20px)" }}>BETA</div>
+
+        {/* ── ONBOARDING ── */}
+        {phase === PHASES.ONBOARDING && (() => {
+          const s = ONBOARDING[onbStep];
+          return (
+            <div style={{ maxWidth:340,width:"100%",textAlign:"center" }}>
+              <div style={{ ...glass({ padding:"40px 32px",marginBottom:28 }) }}>
+                <GlassShine /><GlossShimmer />
+                <div style={{ position:"relative",zIndex:2 }}>
+                  <div style={{ fontSize:56,marginBottom:24 }}>{s.icon}</div>
+                  <h1 style={{ fontSize:26,fontWeight:800,color:T.text,margin:"0 0 12px",letterSpacing:"-0.02em" }}>{s.title}</h1>
+                  <p style={{ fontSize:15,color:T.text2,lineHeight:1.75,margin:0 }}>{s.sub}</p>
+                </div>
+              </div>
+              <div style={{ display:"flex",justifyContent:"center",gap:8,marginBottom:28 }}>
+                {[0,1,2].map(i => (
+                  <div key={i} style={{ height:6,width:i===onbStep?24:6,borderRadius:3,transition:"all 0.3s cubic-bezier(0.34,1.56,0.64,1)",background:i===onbStep?T.accent:T.glassBorder,boxShadow:i===onbStep?T.accentGlow:"none" }} />
+                ))}
+              </div>
+              <button onClick={() => {
+                if (onbStep < 2) { setOnbStep(o => o+1); return; }
+                localStorage.setItem("rep_onboarded","1");
+                setPhase(PHASES.IGNITION);
+              }} style={btnPrimary({ fontSize:17,padding:16 })}>
+                <span style={{ position:"relative",zIndex:1 }}>{onbStep < 2 ? "Next →" : "Let's go"}</span>
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* ── IGNITION ── */}
+        {phase === PHASES.IGNITION && (
+          <div style={{ maxWidth:340,width:"100%",textAlign:"center" }}>
+            <div style={{ marginBottom:40 }}>
+              <div style={{ fontSize:11,fontWeight:800,letterSpacing:"0.2em",color:T.text3,textTransform:"uppercase",marginBottom:14 }}>rep legend</div>
+              <h1 style={{ fontSize:36,fontWeight:300,color:T.text,margin:0,letterSpacing:"0.04em" }}>ready when you are</h1>
+            </div>
+            <div style={{ ...glass({ padding:"20px",marginBottom:28,borderRadius:T.radiusMd }) }}>
+              <GlassShine />
+              <div style={{ position:"relative",zIndex:2 }}>
+                <div style={{ fontSize:11,color:T.text3,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:14,fontWeight:700 }}>rest between sets</div>
+                <div style={{ display:"flex",gap:8,justifyContent:"center" }}>
+                  {[60,90,120,180].map(s => (
+                    <button key={s} onClick={() => { setRestDuration(s); localStorage.setItem("rep_rest",s); }} style={pill(restDuration===s,{fontSize:13})}>
+                      {s===60?"1m":s===90?"1m30":s===120?"2m":"3m"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button onClick={handleReady} style={btnPrimary({ fontSize:18,padding:18 })}>
+              <span style={{ position:"relative",zIndex:1 }}>I'm ready</span>
+            </button>
+            {history.length > 0 && (
+              <button onClick={() => setPhase(PHASES.HISTORY)}
+                style={{ marginTop:18,background:"none",border:"none",color:T.text3,fontSize:13,cursor:"pointer",fontFamily:T.fontFamily,letterSpacing:"0.04em" }}>
+                view history
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── CALIBRATION ── */}
+        {phase === PHASES.CALIBRATION && (
+          <div style={{ maxWidth:340,width:"100%",textAlign:"center" }}>
+            <div style={{ fontSize:12,fontWeight:700,letterSpacing:"0.12em",color:T.purple,textTransform:"uppercase",marginBottom:20 }}>
+              {calSet===1?"Reading the machine's signal":"One more — almost synced"}
+            </div>
+            <div style={{ fontSize:"clamp(96px,30vw,140px)",fontWeight:900,letterSpacing:"-0.04em",lineHeight:1,color:`${T.purple}70`,marginBottom:12,fontVariantNumeric:"tabular-nums" }}>{calReps}</div>
+            <p style={{ fontSize:15,color:T.text2,margin:"0 0 40px",lineHeight:1.6 }}>
+              {calSet===1?"Do a warm-up set. We're learning the machine's motion.":"Good — the pattern is locking in."}
+            </p>
+            <button onClick={() => { isCalibrating.current=true; setCalReps(r=>r+1); pulse(10); }}
+              style={{ ...glass({width:110,height:110,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 36px",cursor:"pointer",flexDirection:"column"}),border:`1.5px solid ${T.purple}50`,background:`${T.purple}10`,color:T.purple,fontSize:13,fontWeight:600 }}>
+              tap<br/>each rep
+            </button>
+            <button onClick={handleCalDone} disabled={calReps<3}
+              style={{ background:"none",border:"none",color:calReps>=3?T.text2:T.text3,fontSize:14,cursor:calReps>=3?"pointer":"default",transition:"color 0.3s",fontFamily:T.fontFamily }}>
+              set complete →
+            </button>
+            {calReps<3 && <p style={{ fontSize:12,color:T.text3,marginTop:10 }}>do at least 3 reps to calibrate</p>}
+          </div>
+        )}
+
+        {/* ── ACTIVE SET ── */}
+        {phase === PHASES.ACTIVE && (
+          <div style={{ textAlign:"center",maxWidth:340,width:"100%",display:"flex",flexDirection:"column",minHeight:"60vh",justifyContent:"space-between" }}>
+            <div onClick={autoCount?undefined:handleManualRep}
+              style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:autoCount?"default":"pointer",WebkitTapHighlightColor:"transparent",paddingTop:40 }}>
+              <div style={{ position:"relative",filter:`drop-shadow(0 0 ${activeReps>0?"40px":"0px"} ${T.accent}50)`,transition:"filter 0.4s ease" }}>
+                <div style={{ fontSize:"clamp(128px,36vw,190px)",fontWeight:900,letterSpacing:"-0.05em",lineHeight:1,color:ghostRep?`${T.text}35`:T.text,fontVariantNumeric:"tabular-nums",transition:"color 0.1s" }}>
+                  {ghostRep?activeReps+1:activeReps}
+                </div>
+              </div>
+              <div style={{ fontSize:11,color:T.text3,letterSpacing:"0.14em",textTransform:"uppercase",marginTop:10 }}>
+                set {currentSet}
+                {autoCount && <span style={{ marginLeft:10,fontSize:9,color:T.purple,border:`1px solid ${T.purple}40`,borderRadius:5,padding:"2px 7px",letterSpacing:"0.08em" }}>auto</span>}
+              </div>
+              {!autoCount && activeReps===0 && (
+                <div style={{ fontSize:13,color:T.text3,marginTop:24,letterSpacing:"0.04em",animation:"lgFadeIn 1s ease 0.5s both" }}>tap anywhere to count</div>
+              )}
+            </div>
+            <div style={{ paddingBottom:32 }}>
+              <div style={{ display:"flex",gap:20,justifyContent:"center",marginBottom:28 }}>
+                {["−","+"].map((sym,i) => (
+                  <button key={sym} onClick={() => setActiveReps(r=>i===0?Math.max(0,r-1):r+1)}
+                    style={{ ...glass({width:52,height:52,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}),color:T.text2,fontSize:24,cursor:"pointer",border:`1px solid ${T.glassBorder}` }}>{sym}</button>
+                ))}
+              </div>
+              <button onClick={handleSetDone} style={{ background:"none",border:"none",color:activeReps>0?T.text2:T.text3,fontSize:14,letterSpacing:"0.05em",cursor:"pointer",transition:"color 0.3s",marginBottom:20,display:"block",margin:"0 auto 20px",fontFamily:T.fontFamily }}>done</button>
+              {!autoCount && (
+                <button onClick={() => setShowAutoPrompt(true)} style={{ background:"none",border:"none",color:T.text3,fontSize:11,letterSpacing:"0.06em",cursor:"pointer",display:"flex",alignItems:"center",gap:6,margin:"0 auto",fontFamily:T.fontFamily }}>
+                  <span style={{ fontSize:9,color:T.purple }}>✦</span><span>try auto-count</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── AUTO-COUNT PROMPT ── */}
+        {showAutoPrompt && (
+          <div style={{ position:"fixed",inset:0,background:"rgba(8,8,16,0.85)",backdropFilter:"blur(32px)",WebkitBackdropFilter:"blur(32px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,zIndex:200,animation:"lgFadeIn 0.3s ease" }}>
+            <div style={{ ...glass({maxWidth:320,width:"100%",padding:"36px 28px",textAlign:"center"}) }}>
+              <GlassShine /><GlossShimmer />
+              <div style={{ position:"relative",zIndex:2 }}>
+                <div style={{ display:"inline-block",background:`${T.purple}18`,border:`1px solid ${T.purple}35`,borderRadius:8,padding:"4px 12px",fontSize:10,fontWeight:700,letterSpacing:"0.12em",color:T.purple,textTransform:"uppercase",marginBottom:24 }}>experimental</div>
+                <h2 style={{ fontSize:26,fontWeight:800,color:T.text,margin:"0 0 14px",letterSpacing:"-0.02em" }}>auto-count</h2>
+                <p style={{ fontSize:15,color:T.text2,lineHeight:1.7,margin:"0 0 10px" }}>Clip your phone to a fixed part of the machine frame.</p>
+                <p style={{ fontSize:13,color:T.text3,lineHeight:1.6,margin:"0 0 36px" }}>We'll detect each rep from the machine's motion. Two warm-up sets to calibrate.</p>
+                <button onClick={handleEnableAutoCount} style={btnGlass({ marginBottom:10,color:T.purple,border:`1px solid ${T.purple}40`,background:`${T.purple}12` })}>Try it →</button>
+                <button onClick={() => setShowAutoPrompt(false)} style={{ width:"100%",padding:14,background:"transparent",border:"none",color:T.text3,fontSize:14,cursor:"pointer",fontFamily:T.fontFamily }}>keep tapping</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── REST ── */}
+        {phase === PHASES.REST && (
+          <div style={{ maxWidth:340,width:"100%",textAlign:"center" }}>
+            {showStreak && streak>0 && (
+              <div style={{ position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",...glass({padding:"8px 18px",borderRadius:T.radiusPill}),fontSize:13,color:T.text2,animation:"lgFadeIn 0.6s ease",whiteSpace:"nowrap" }}>
+                <GlassShine />
+                <span style={{ position:"relative",zIndex:1 }}>🔥 Day {streak+1} — {streak>=3?"don't make tomorrow uncomfortable":"you're building something"}</span>
+              </div>
+            )}
+            <BreathingTimer total={restDuration} onComplete={handleContinue} />
+            <div style={{ minHeight:90,display:"flex",alignItems:"center",justifyContent:"center",margin:"36px 0" }}>
+              {showQuote && (
+                <div style={{ ...glass({padding:"20px 24px",borderRadius:T.radiusMd}) }}>
+                  <GlassShine />
+                  <div style={{ position:"relative",zIndex:2 }}><AnimatedQuote quote={QUOTES[quoteIdx]} /></div>
+                </div>
+              )}
+            </div>
+            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+              <button onClick={handleContinue} style={btnPrimary()}>Continue →</button>
+              <button onClick={handleEndWorkout} style={btnGlass()}>End workout</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── LOG EXERCISE ── */}
+        {phase === PHASES.LOG_EXERCISE && (
+          <div style={{ maxWidth:340,width:"100%" }}>
+            <div style={{ textAlign:"center",marginBottom:20 }}>
+              <div style={{ fontSize:11,color:T.text3,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8,fontWeight:700 }}>set {currentSet-1}</div>
+              <h2 style={{ fontSize:24,fontWeight:800,color:T.text,margin:0,letterSpacing:"-0.02em" }}>What did you just do?</h2>
+            </div>
+
+            {/* ── MACHINE SCAN ── */}
+            {scanEnabled
+              ? <MachineScan apiKey={apiKey} onResult={handleExPicked} onDismiss={() => {}} />
+              : (
+                <button onClick={() => setShowApiSetup(true)} style={{
+                  width:"100%",padding:"13px 16px",marginBottom:12,
+                  background:"transparent",border:`1.5px dashed rgba(255,255,255,0.12)`,
+                  borderRadius:T.radiusMd,cursor:"pointer",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  gap:10,color:T.text3,fontFamily:T.fontFamily,fontSize:14,fontWeight:600,
+                }}>
+                  <span style={{ fontSize:18 }}>📷</span>
+                  <span>Scan machine with AI</span>
+                  <span style={{ fontSize:10,background:`${T.purple}20`,border:`1px solid ${T.purple}35`,color:T.purple,padding:"2px 7px",borderRadius:5,letterSpacing:"0.08em" }}>SETUP</span>
+                </button>
+              )
+            }
+
+            {/* Same as last shortcut */}
+            {workout.length>=2 && workout[workout.length-1]?.exercise && (
+              <button onClick={() => handleExPicked(workout[workout.length-1].exercise)}
+                style={{ ...glass({width:"100%",padding:"13px 18px",marginBottom:10,borderRadius:T.radiusMd}),color:T.accent,fontSize:14,fontWeight:600,cursor:"pointer",textAlign:"left",border:`1px solid ${T.accentBorder}`,background:T.accentDim }}>
+                <GlassShine />
+                <span style={{ position:"relative",zIndex:2 }}>↩ same as last — {workout[workout.length-1].exercise}</span>
+              </button>
+            )}
+
+            {/* Search */}
+            <input type="text" placeholder="search or type exercise..."
+              value={exQuery} onChange={e => setExQuery(e.target.value)}
+              autoFocus
+              style={{ width:"100%",padding:"14px 16px",boxSizing:"border-box",background:T.glass,backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",border:`1px solid ${T.glassBorder}`,borderRadius:T.radiusMd,color:T.text,fontSize:16,marginBottom:8,outline:"none",fontFamily:T.fontFamily,boxShadow:"inset 0 1px 0 rgba(255,255,255,0.06)" }} />
+
+            <div style={{ ...glass({borderRadius:T.radiusMd,maxHeight:260,overflowY:"auto"}) }}>
+              <GlassShine />
+              {filtered.map(ex => (
+                <button key={ex} onClick={() => handleExPicked(ex)}
+                  style={{ display:"block",width:"100%",padding:"13px 18px",background:"transparent",border:"none",borderBottom:`1px solid rgba(255,255,255,0.05)`,color:T.text2,fontSize:15,textAlign:"left",cursor:"pointer",fontFamily:T.fontFamily,transition:"background 0.15s,color 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.06)"; e.currentTarget.style.color=T.text; }}
+                  onMouseLeave={e => { e.currentTarget.style.background="transparent"; e.currentTarget.style.color=T.text2; }}
+                >{ex}</button>
+              ))}
+              {exQuery && !EXERCISES.find(e => e.toLowerCase()===exQuery.toLowerCase()) && (
+                <button onClick={() => handleExPicked(exQuery)}
+                  style={{ display:"block",width:"100%",padding:"13px 18px",background:"transparent",border:"none",borderBottom:`1px solid rgba(255,255,255,0.05)`,color:T.accent,fontSize:15,textAlign:"left",cursor:"pointer",fontFamily:T.fontFamily }}>
+                  + add "{exQuery}"
+                </button>
+              )}
+            </div>
+
+            <button onClick={() => handleExPicked("Custom")} style={{ marginTop:14,background:"none",border:"none",color:T.text3,fontSize:13,cursor:"pointer",fontFamily:T.fontFamily }}>skip</button>
+          </div>
+        )}
+
+        {/* ── REVEAL ── */}
+        {phase === PHASES.REVEAL && revealData && (
+          <div style={{ maxWidth:340,width:"100%",...glass({padding:"28px 24px"}) }}>
+            <GlassShine /><GlossShimmer />
+            <div style={{ position:"relative",zIndex:2 }}>
+              <GradeReveal
+                grade={revealData.grade} xp={revealData.xp} bonusXp={revealData.bonusXp}
+                sets={revealData.sets} totalReps={revealData.totalReps} prevReps={revealData.prevReps}
+                onDone={goIgnition}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── HISTORY ── */}
+        {phase === PHASES.HISTORY && (
+          <div style={{ maxWidth:340,width:"100%",maxHeight:"86vh",overflowY:"auto" }}>
+            <div style={{ display:"flex",alignItems:"center",marginBottom:24 }}>
+              <button onClick={() => setPhase(PHASES.IGNITION)}
+                style={{ background:"none",border:"none",color:T.text3,fontSize:14,cursor:"pointer",marginRight:16,fontFamily:T.fontFamily }}>
+                ← back
+              </button>
+              <h2 style={{ fontSize:18,fontWeight:800,color:T.text,margin:0,letterSpacing:"-0.01em" }}>History</h2>
+            </div>
+            {history.length === 0 && (
+              <p style={{ color:T.text3,textAlign:"center",marginTop:48 }}>No workouts yet.</p>
+            )}
+            {history.map((w, i) => (
+              <div key={i} style={{ ...glass({ padding:"16px 18px",marginBottom:10,borderRadius:T.radiusMd }) }}>
+                <GlassShine />
+                <div style={{ position:"relative",zIndex:2,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontSize:12,color:T.text3,marginBottom:4 }}>
+                      {new Date(w.date).toLocaleDateString("en-US",{ weekday:"short",month:"short",day:"numeric" })}
+                    </div>
+                    <div style={{ fontSize:15,color:T.text2 }}>
+                      {w.totalReps} reps · {w.sets?.length ?? "–"} sets
+                    </div>
+                  </div>
+                  <div style={{ fontSize:34,fontWeight:900,letterSpacing:"-0.03em",color:GRADE_COLORS[w.grade] ?? T.blue,textShadow:`0 0 24px ${(GRADE_COLORS[w.grade] ?? T.blue)}40` }}>
+                    {w.grade}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </div>
+
+      {/* API Key Setup Modal */}
+      {showApiSetup && <ApiKeySetup onSave={saveApiKey} onDismiss={() => setShowApiSetup(false)} />}
+
+      {/* Footer */}
+      <div style={{ position:"fixed",bottom:14,left:"50%",transform:"translateX(-50%)",fontSize:11,color:T.text3,whiteSpace:"nowrap",zIndex:50,letterSpacing:"0.05em" }}>
+        rep legend · beta · data stays on device
+      </div>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap');
+        @keyframes lgFadeIn  { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes lgFadeUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes lgDrift1  { from{transform:translate(0,0) scale(1)} to{transform:translate(50px,35px) scale(1.15)} }
+        @keyframes lgDrift2  { from{transform:translate(0,0) scale(1)} to{transform:translate(-40px,-30px) scale(1.12)} }
+        @keyframes lgDrift3  { from{transform:translate(0,0) scale(1)} to{transform:translate(30px,-40px) scale(1.2)} }
+        @keyframes lgGlimmer { 0%,100%{background-position:-200% 0} 50%{background-position:200% 0} }
+        @keyframes lgSpin    { to{transform:rotate(360deg)} }
+        button:active { opacity:0.7; transform:scale(0.96) !important; }
+        input::placeholder { color:rgba(255,255,255,0.25); }
+        * { -webkit-tap-highlight-color:transparent; box-sizing:border-box; }
+        button, input, select, textarea { font-family: inherit; }
+        ::-webkit-scrollbar { display:none; }
+      `}</style>
+    </div>
+  );
+}

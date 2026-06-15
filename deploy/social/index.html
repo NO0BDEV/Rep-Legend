@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rep Legend — Local Feed</title>
+<meta name="description" content="See what lifters near you are posting. Workout score cards, gym photos, and upvotes. No comments, no algorithm.">
+<meta name="theme-color" content="#0F172A">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #080B14;
+  --bg2:      #0F172A;
+  --bg3:      #162032;
+  --indigo:   #818CF8;
+  --indigo2:  #A5B4FC;
+  --indigo3:  #4F46E5;
+  --amber:    #F59E0B;
+  --emerald:  #34D399;
+  --text:     #F5F5F4;
+  --muted:    rgba(165,180,252,0.45);
+  --border:   rgba(129,140,248,0.12);
+  --font:     -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', sans-serif;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── AMBIENT GLOW ── */
+body::before {
+  content: '';
+  position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+  width: 1000px; height: 500px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.07) 0%, transparent 65%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(8,11,20,0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px;
+}
+.nav-left { display: flex; align-items: center; gap: 14px; }
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--indigo2); text-decoration: none;
+  font-size: 14px; font-weight: 600;
+  opacity: .8; transition: opacity .2s;
+}
+.back-btn:hover { opacity: 1; }
+.nav-title { font-size: 16px; font-weight: 800; letter-spacing: -.3px; color: var(--text); }
+.nav-subtitle { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+.nav-right { display: flex; gap: 10px; align-items: center; }
+.post-btn {
+  background: var(--indigo3); color: #fff;
+  border: none; border-radius: 999px;
+  padding: 8px 18px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: var(--font);
+  transition: opacity .2s;
+}
+.post-btn:hover { opacity: .85; }
+
+/* ── LOCATION BAR ── */
+.location-bar {
+  position: relative; z-index: 1;
+  padding: 16px 20px 0;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.location-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(129,140,248,0.08);
+  border: 1px solid var(--border);
+  border-radius: 999px; padding: 7px 14px;
+  font-size: 13px; font-weight: 600; color: var(--indigo2);
+  cursor: pointer; transition: background .2s;
+}
+.location-chip:hover { background: rgba(129,140,248,0.14); }
+.location-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: #34D399; animation: live-dot 2s infinite; }
+@keyframes live-dot { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,211,153,0.4)} 50%{opacity:.7;box-shadow:0 0 0 4px rgba(52,211,153,0)} }
+.radius-chips { display: flex; gap: 6px; }
+.rc {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 999px; padding: 7px 14px;
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.4);
+  cursor: pointer; transition: all .2s;
+}
+.rc.active {
+  background: rgba(129,140,248,0.12);
+  border-color: rgba(129,140,248,0.3);
+  color: var(--indigo2);
+}
+.rc:hover { color: var(--indigo2); }
+
+/* ── SORT TABS ── */
+.sort-tabs {
+  position: relative; z-index: 1;
+  padding: 14px 20px 0;
+  display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+}
+.sort-tab {
+  padding: 8px 16px; font-size: 13px; font-weight: 600;
+  color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; transition: all .2s;
+}
+.sort-tab.active { color: var(--indigo2); border-bottom-color: var(--indigo); }
+.sort-tab:hover { color: var(--indigo2); }
+
+/* ── FEED ── */
+.feed {
+  position: relative; z-index: 1;
+  max-width: 680px; margin: 0 auto;
+  padding: 20px 16px 100px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: border-color .25s;
+}
+.card:hover { border-color: rgba(129,140,248,0.25); }
+
+/* Score card type */
+.card-score-inner {
+  padding: 28px 24px 22px;
+  text-align: center;
+  position: relative;
+}
+.card-score-inner::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(129,140,248,0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+.card-grade-label {
+  font-size: 10px; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; margin-bottom: 8px;
+  position: relative;
+}
+.card-grade {
+  font-size: 80px; font-weight: 900; letter-spacing: -4px;
+  line-height: 1; position: relative;
+}
+.card-grade.amber { color: var(--amber); text-shadow: 0 0 48px rgba(245,158,11,0.25); }
+.card-grade.emerald { color: var(--emerald); text-shadow: 0 0 48px rgba(52,211,153,0.15); }
+.card-grade.indigo { color: var(--indigo); text-shadow: 0 0 48px rgba(129,140,248,0.15); }
+.card-grade-note {
+  font-size: 12px; margin-top: 6px; font-weight: 500;
+  opacity: .55; position: relative;
+}
+.card-stats {
+  display: flex; justify-content: space-around;
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  position: relative;
+}
+.card-stat-val { font-size: 20px; font-weight: 800; color: var(--text); }
+.card-stat-lbl {
+  font-size: 9px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em; margin-top: 3px;
+}
+.card-exercises {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 0 24px 18px; position: relative;
+}
+.ex-chip {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px; padding: 4px 10px;
+  font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 500;
+}
+
+/* Photo card type */
+.card-photo {
+  aspect-ratio: 4/3;
+  background: var(--bg3);
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.photo-placeholder {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 56px; opacity: .06;
+}
+.photo-breathe-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: linear-gradient(180deg, rgba(15,23,42,0.2) 0%, rgba(15,23,42,0.7) 100%);
+}
+.breathe-text {
+  font-size: 36px; font-weight: 300; letter-spacing: .25em;
+  color: var(--indigo); opacity: .75;
+}
+.breathe-sub {
+  font-size: 10px; color: rgba(129,140,248,0.4);
+  letter-spacing: .14em; text-transform: uppercase;
+  font-weight: 600; margin-top: 10px;
+}
+.photo-gym-tag {
+  position: absolute; bottom: 12px; left: 14px;
+  background: rgba(8,11,20,0.75);
+  border: 1px solid rgba(129,140,248,0.2);
+  backdrop-filter: blur(8px);
+  border-radius: 8px; padding: 5px 11px;
+  font-size: 11px; color: var(--indigo2); font-weight: 700;
+}
+.photo-score-tag {
+  position: absolute; top: 12px; right: 14px;
+  background: rgba(8,11,20,0.75);
+  border: 1px solid rgba(245,158,11,0.25);
+  backdrop-filter: blur(8px);
+  border-radius: 8px; padding: 5px 11px;
+  font-size: 12px; color: var(--amber); font-weight: 800;
+}
+
+/* Card footer */
+.card-footer {
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--border);
+}
+.card-user { display: flex; align-items: center; gap: 10px; }
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+.user-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.user-meta { font-size: 11px; color: rgba(255,255,255,0.28); margin-top: 1px; }
+.upvote-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(129,140,248,0.08);
+  border: 1px solid rgba(129,140,248,0.18);
+  border-radius: 999px; padding: 7px 16px;
+  color: var(--indigo); font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: var(--font);
+  transition: all .2s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.upvote-btn:hover, .upvote-btn.voted {
+  background: rgba(129,140,248,0.18);
+  border-color: rgba(129,140,248,0.4);
+  color: var(--indigo2);
+}
+.upvote-btn.voted { color: var(--indigo2); }
+.upvote-icon { font-size: 12px; transition: transform .15s; }
+.upvote-btn:active .upvote-icon { transform: translateY(-3px); }
+
+/* ── POST MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 28px 28px 0 0;
+  width: 100%; max-width: 640px;
+  padding: 24px 24px 48px;
+  transform: translateY(40px); transition: transform .3s cubic-bezier(.16,1,.3,1);
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-handle { width: 40px; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; margin: 0 auto 24px; }
+.modal-title { font-size: 20px; font-weight: 800; letter-spacing: -.5px; margin-bottom: 6px; }
+.modal-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+.post-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.post-type {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px; padding: 20px;
+  cursor: pointer; transition: all .2s; text-align: center;
+}
+.post-type:hover, .post-type.sel {
+  background: rgba(129,140,248,0.08);
+  border-color: rgba(129,140,248,0.25);
+}
+.post-type .pt-icon { font-size: 28px; margin-bottom: 10px; }
+.post-type .pt-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.post-type .pt-desc { font-size: 12px; color: var(--muted); }
+.modal-btn {
+  width: 100%; padding: 14px; border-radius: 14px;
+  background: var(--indigo3); color: #fff;
+  font-size: 15px; font-weight: 700; border: none;
+  cursor: pointer; font-family: var(--font); transition: opacity .2s;
+}
+.modal-btn:hover { opacity: .85; }
+
+/* ── EMPTY / LOADING ── */
+.feed-empty {
+  text-align: center; padding: 80px 24px;
+  color: var(--muted); font-size: 15px;
+}
+.feed-empty .fe-icon { font-size: 48px; margin-bottom: 16px; opacity: .3; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+  background: rgba(8,11,20,0.9);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around;
+  padding: 10px 0 env(safe-area-inset-bottom, 10px);
+}
+.bnav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: rgba(255,255,255,0.28); font-size: 10px; font-weight: 600;
+  text-decoration: none; padding: 4px 16px;
+  transition: color .2s; cursor: pointer;
+}
+.bnav-item.active { color: var(--indigo2); }
+.bnav-item .bnav-icon { font-size: 20px; }
+
+/* ── RESPONSIVE ── */
+@media (min-width: 640px) {
+  .feed { padding-bottom: 40px; }
+  .bottom-nav { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <a href="/" class="back-btn">← Rep Legend</a>
+    <div>
+      <div class="nav-title">Local Feed</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <button class="post-btn" onclick="openModal()">+ Share</button>
+  </div>
+</nav>
+
+<!-- LOCATION + RADIUS -->
+<div class="location-bar">
+  <div class="location-chip" id="locationChip" onclick="requestLocation()">
+    <span class="dot"></span>
+    <span id="locationLabel">Detecting location…</span>
+  </div>
+  <div class="radius-chips">
+    <div class="rc active" onclick="setRadius(this,'1 mi')">1 mi</div>
+    <div class="rc" onclick="setRadius(this,'5 mi')">5 mi</div>
+    <div class="rc" onclick="setRadius(this,'25 mi')">25 mi</div>
+    <div class="rc" onclick="setRadius(this,'City')">City</div>
+  </div>
+</div>
+
+<!-- SORT TABS -->
+<div class="sort-tabs">
+  <div class="sort-tab active" onclick="setTab(this)">🔥 Top Today</div>
+  <div class="sort-tab" onclick="setTab(this)">⚡ New</div>
+  <div class="sort-tab" onclick="setTab(this)">🏆 All Time</div>
+  <div class="sort-tab" onclick="setTab(this)">📸 Photos</div>
+</div>
+
+<!-- FEED -->
+<div class="feed" id="feed">
+  <!-- injected by JS -->
+</div>
+
+<!-- POST MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Share to Local Feed</div>
+    <div class="modal-sub">No comments. Just upvotes. Your city sees this.</div>
+    <div class="post-type-grid">
+      <div class="post-type sel" onclick="selectPostType(this,'score')">
+        <div class="pt-icon">🏆</div>
+        <div class="pt-title">Workout Card</div>
+        <div class="pt-desc">Share your grade + stats from your last session</div>
+      </div>
+      <div class="post-type" onclick="selectPostType(this,'photo')">
+        <div class="pt-icon">📸</div>
+        <div class="pt-title">Gym Photo</div>
+        <div class="pt-desc">Progress pic, PR moment, or mid-session vibe</div>
+      </div>
+    </div>
+    <button class="modal-btn" onclick="submitPost()">Post to Feed</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV (mobile) -->
+<div class="bottom-nav">
+  <a href="/app" class="bnav-item">
+    <span class="bnav-icon">💪</span>
+    <span>Workout</span>
+  </a>
+  <a href="/social" class="bnav-item active">
+    <span class="bnav-icon">🌍</span>
+    <span>Local</span>
+  </a>
+  <a href="/app#history" class="bnav-item">
+    <span class="bnav-icon">📊</span>
+    <span>History</span>
+  </a>
+</div>
+
+<script>
+// ── MOCK DATA ──
+const POSTS = [
+  {
+    id: 1, type: 'score',
+    user: 'marcus_lifts', avatar: 'M',
+    avatarBg: 'linear-gradient(135deg,#FF6B35,#C94A1A)',
+    dist: '0.3 mi', time: '1h ago',
+    grade: 'A+', gradeClass: 'amber',
+    gradeNote: '🔥 Personal Best',
+    stats: [{v:'168',l:'Reps'},{v:'7',l:'Sets'},{v:'52m',l:'Time'}],
+    exercises: ['Bench Press','Incline DB','Cable Fly','Dips'],
+    votes: 124, voted: false,
+    gym: null
+  },
+  {
+    id: 2, type: 'photo',
+    user: 'priya.trains', avatar: 'P',
+    avatarBg: 'linear-gradient(135deg,#818CF8,#4F46E5)',
+    dist: '0.8 mi', time: '3h ago',
+    grade: 'A', gradeNote: null,
+    votes: 89, voted: false,
+    gym: '📍 Iron Vault Gym',
+    breathe: true,
+    photoNote: 'Post-session. The breathing screen hits different when you hit your goals.',
+    photoEmoji: '🧘'
+  },
+  {
+    id: 3, type: 'score',
+    user: 'jordan.method', avatar: 'J',
+    avatarBg: 'linear-gradient(135deg,#34D399,#059669)',
+    dist: '1.4 mi', time: '5h ago',
+    grade: 'B+', gradeClass: 'emerald',
+    gradeNote: '🔥 Day 18 Streak',
+    stats: [{v:'112',l:'Reps'},{v:'5',l:'Sets'},{v:'39m',l:'Time'}],
+    exercises: ['Squat','Leg Press','RDL','Leg Curl'],
+    votes: 67, voted: false,
+    gym: null
+  },
+  {
+    id: 4, type: 'photo',
+    user: 'alex.bulk', avatar: 'A',
+    avatarBg: 'linear-gradient(135deg,#F59E0B,#B45309)',
+    dist: '2.1 mi', time: '7h ago',
+    grade: 'A+', gradeNote: null,
+    votes: 203, voted: false,
+    gym: '📍 Powerhouse Gym',
+    breathe: false,
+    photoNote: 'PR on deadlift today. 405. The app counted every single one.',
+    photoEmoji: '🏋️'
+  },
+  {
+    id: 5, type: 'score',
+    user: 'sam.lifts', avatar: 'S',
+    avatarBg: 'linear-gradient(135deg,#C084FC,#7C3AED)',
+    dist: '3.2 mi', time: '12h ago',
+    grade: 'A', gradeClass: 'amber',
+    gradeNote: '+40 XP bonus',
+    stats: [{v:'144',l:'Reps'},{v:'6',l:'Sets'},{v:'47m',l:'Time'}],
+    exercises: ['Pull-ups','Lat Pulldown','Row','Curl'],
+    votes: 55, voted: false,
+    gym: null
+  },
+  {
+    id: 6, type: 'photo',
+    user: 'reyna.rep', avatar: 'R',
+    avatarBg: 'linear-gradient(135deg,#F472B6,#BE185D)',
+    dist: '4.0 mi', time: '1d ago',
+    grade: 'B', gradeNote: null,
+    votes: 41, voted: false,
+    gym: '📍 LA Fitness',
+    breathe: true,
+    photoNote: 'Rest day. The breathe screen is actually so calming.',
+    photoEmoji: '😮‍💨'
+  }
+];
+
+// ── RENDER ──
+function renderFeed(posts) {
+  const feed = document.getElementById('feed');
+  if (!posts.length) {
+    feed.innerHTML = `<div class="feed-empty"><div class="fe-icon">🌍</div>No posts in this area yet.<br>Be the first to share your workout.</div>`;
+    return;
+  }
+  feed.innerHTML = posts.map(p => renderCard(p)).join('');
+  // attach vote listeners
+  feed.querySelectorAll('.upvote-btn').forEach(btn => {
+    btn.addEventListener('click', () => toggleVote(btn));
+  });
+}
+
+function renderCard(p) {
+  const gradeColor = p.gradeClass === 'emerald' ? '#34D399' : p.gradeClass === 'indigo' ? '#818CF8' : '#F59E0B';
+
+  if (p.type === 'score') {
+    return `
+    <div class="card" data-id="${p.id}">
+      <div class="card-score-inner" style="background:radial-gradient(ellipse at 50% 0%,${gradeColor}08 0%,transparent 60%);">
+        <div class="card-grade-label" style="color:${gradeColor}55;">WORKOUT COMPLETE</div>
+        <div class="card-grade ${p.gradeClass}">${p.grade}</div>
+        <div class="card-grade-note">${p.gradeNote || ''}</div>
+        <div class="card-stats">
+          ${p.stats.map(s=>`<div><div class="card-stat-val">${s.v}</div><div class="card-stat-lbl">${s.l}</div></div>`).join('')}
+        </div>
+      </div>
+      ${p.exercises ? `<div class="card-exercises">${p.exercises.map(e=>`<div class="ex-chip">${e}</div>`).join('')}</div>` : ''}
+      <div class="card-footer">
+        <div class="card-user">
+          <div class="user-avatar" style="background:${p.avatarBg}">${p.avatar}</div>
+          <div>
+            <div class="user-name">${p.user}</div>
+            <div class="user-meta">${p.dist} · ${p.time}</div>
+          </div>
+        </div>
+        <button class="upvote-btn${p.voted?' voted':''}" data-id="${p.id}" data-votes="${p.votes}">
+          <span class="upvote-icon">▲</span> ${p.votes}
+        </button>
+      </div>
+    </div>`;
+  }
+
+  // photo card
+  return `
+  <div class="card" data-id="${p.id}">
+    <div class="card-photo">
+      <div class="photo-placeholder">${p.photoEmoji}</div>
+      ${p.breathe ? `
+      <div class="photo-breathe-overlay">
+        <div class="breathe-text">breathe</div>
+        <div class="breathe-sub">4 · 7 · 8 recovery</div>
+      </div>` : `
+      <div style="position:absolute;inset:0;background:linear-gradient(160deg,#0F172A 0%,#162032 50%,#1a1230 100%);display:flex;align-items:center;justify-content:center;">
+        <div style="font-size:64px;opacity:0.06;">${p.photoEmoji}</div>
+      </div>`}
+      ${p.gym ? `<div class="photo-gym-tag">${p.gym}</div>` : ''}
+      ${p.grade ? `<div class="photo-score-tag">${p.grade}</div>` : ''}
+    </div>
+    ${p.photoNote ? `<div style="padding:14px 18px 4px;font-size:14px;color:rgba(255,255,255,0.55);line-height:1.5;">${p.photoNote}</div>` : ''}
+    <div class="card-footer">
+      <div class="card-user">
+        <div class="user-avatar" style="background:${p.avatarBg}">${p.avatar}</div>
+        <div>
+          <div class="user-name">${p.user}</div>
+          <div class="user-meta">${p.dist} · ${p.time}</div>
+        </div>
+      </div>
+      <button class="upvote-btn${p.voted?' voted':''}" data-id="${p.id}" data-votes="${p.votes}">
+        <span class="upvote-icon">▲</span> ${p.votes}
+      </button>
+    </div>
+  </div>`;
+}
+
+// ── VOTE ──
+function toggleVote(btn) {
+  const id = parseInt(btn.dataset.id);
+  const post = POSTS.find(p => p.id === id);
+  if (!post) return;
+  post.voted = !post.voted;
+  post.votes += post.voted ? 1 : -1;
+  btn.dataset.votes = post.votes;
+  btn.classList.toggle('voted', post.voted);
+  btn.innerHTML = `<span class="upvote-icon">▲</span> ${post.votes}`;
+  if (post.voted) {
+    btn.querySelector('.upvote-icon').style.transform = 'translateY(-3px)';
+    setTimeout(() => { if(btn.querySelector('.upvote-icon')) btn.querySelector('.upvote-icon').style.transform = ''; }, 300);
+  }
+}
+
+// ── LOCATION ──
+function requestLocation() {
+  if (!navigator.geolocation) {
+    document.getElementById('locationLabel').textContent = 'Location unavailable';
+    return;
+  }
+  document.getElementById('locationLabel').textContent = 'Locating…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      // In production: reverse geocode to city/neighborhood
+      document.getElementById('locationLabel').textContent = 'Near You';
+      renderFeed(POSTS);
+    },
+    () => {
+      document.getElementById('locationLabel').textContent = 'Everywhere';
+      renderFeed(POSTS);
+    },
+    { timeout: 5000 }
+  );
+}
+
+// ── TABS / RADIUS ──
+function setTab(el) {
+  document.querySelectorAll('.sort-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const tab = el.textContent.trim();
+  let sorted = [...POSTS];
+  if (tab.includes('New')) sorted.sort((a,b) => a.id - b.id).reverse();
+  else if (tab.includes('All Time') || tab.includes('Top')) sorted.sort((a,b) => b.votes - a.votes);
+  else if (tab.includes('Photos')) sorted = sorted.filter(p => p.type === 'photo');
+  renderFeed(sorted);
+}
+
+function setRadius(el, r) {
+  document.querySelectorAll('.rc').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── MODAL ──
+let selectedPostType = 'score';
+function openModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+function handleOverlayClick(e) {
+  if (e.target === e.currentTarget) closeModal();
+}
+function selectPostType(el, type) {
+  document.querySelectorAll('.post-type').forEach(p => p.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedPostType = type;
+}
+function submitPost() {
+  closeModal();
+  // In production: open camera / share score card
+  // For demo: add a mock new post
+  const newPost = {
+    id: Date.now(), type: selectedPostType,
+    user: 'you', avatar: 'Y',
+    avatarBg: 'linear-gradient(135deg,#818CF8,#4F46E5)',
+    dist: '0.0 mi', time: 'Just now',
+    grade: 'A', gradeClass: 'amber',
+    gradeNote: 'Just posted 🔥',
+    stats: [{v:'—',l:'Reps'},{v:'—',l:'Sets'},{v:'—',l:'Time'}],
+    exercises: [],
+    votes: 1, voted: true,
+    gym: null,
+    breathe: false, photoEmoji: '💪', photoNote: 'Just finished. The rep counter is 🔥'
+  };
+  POSTS.unshift(newPost);
+  document.querySelectorAll('.sort-tab')[1].click(); // switch to New
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  renderFeed(POSTS);
+  requestLocation();
+});
+</script>
+</body>
+</html>

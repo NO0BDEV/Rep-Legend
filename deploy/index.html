@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rep Legend — Track Every Rep. Become a Legend.</title>
+<meta name="description" content="The workout tracker that counts reps for you. Auto-Rep Beta uses your phone's motion sensor to detect every rep hands-free.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --accent: #FF6B35; --accent2: #FF8C5A;
+    --bg: #000; --bg2: #0A0A0A; --bg3: #111;
+    --text: #FFF; --text2: #ABABAB; --text3: #555;
+    --border: rgba(255,255,255,0.08); --radius: 20px;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo-icon { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg,var(--accent),#C94A1A); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-name { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
+  .nav-links { display: flex; align-items: center; gap: 28px; }
+  .nav-links a { color: var(--text2); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+  .nav-links a:hover { color: var(--text); }
+  .btn { display: inline-block; text-decoration: none; cursor: pointer; font-family: var(--font); border: none; transition: opacity .2s, transform .15s; }
+  .btn-acc { background: var(--accent); color: #fff; padding: 9px 20px; border-radius: 999px; font-size: 14px; font-weight: 700; }
+  .btn-acc:hover { opacity: .88; }
+  .btn-lg { padding: 16px 38px; border-radius: 999px; font-size: 16px; font-weight: 700; }
+  .btn-ghost { background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid var(--border); border-radius: 999px; font-size: 16px; font-weight: 600; padding: 16px 38px; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.11); }
+
+  /* HERO */
+  .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 140px 24px 80px; position: relative; overflow: hidden; }
+  .hero-glow { position: absolute; top: 5%; left: 50%; transform: translateX(-50%); width: 900px; height: 700px; border-radius: 50%; background: radial-gradient(circle, rgba(255,107,53,0.13) 0%, transparent 62%); pointer-events: none; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,107,53,0.12); border: 1px solid rgba(255,107,53,0.25); color: var(--accent); border-radius: 999px; padding: 6px 14px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 28px; }
+  .hero-title { font-size: clamp(46px, 7.5vw, 92px); font-weight: 900; letter-spacing: -3.5px; line-height: .95; margin-bottom: 22px; }
+  .hero-title .hl { color: var(--accent); }
+  .hero-sub { font-size: clamp(16px, 2.2vw, 20px); color: var(--text2); max-width: 540px; line-height: 1.6; margin-bottom: 40px; }
+  .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero-proof { margin-top: 52px; display: flex; align-items: center; gap: 18px; color: var(--text3); font-size: 13px; flex-wrap: wrap; justify-content: center; }
+  .hero-proof span { display: flex; align-items: center; gap: 5px; }
+
+  /* PHONE MOCKUP */
+  .mockup-wrap { display: flex; justify-content: center; padding: 0 24px 100px; }
+  .phone { width: 260px; height: 510px; border-radius: 40px; border: 2px solid rgba(255,255,255,0.1); background: #0C0C0C; box-shadow: 0 60px 120px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.1); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; padding: 28px 18px 18px; }
+  .phone-notch { width: 78px; height: 20px; background: #000; border-radius: 0 0 14px 14px; margin-bottom: 12px; flex-shrink: 0; }
+  .pulse-ring { position: absolute; top: 50%; left: 50%; border-radius: 50%; border: 2px solid rgba(255,107,53,0.3); animation: pulse 2s ease-out infinite; }
+  .pr1 { width: 110px; height: 110px; transform: translate(-50%,-50%); }
+  .pr2 { width: 160px; height: 160px; transform: translate(-50%,-50%); animation-delay: .7s; border-color: rgba(255,107,53,0.14); }
+  @keyframes pulse { 0%{transform:translate(-50%,-50%) scale(.8);opacity:1} 100%{transform:translate(-50%,-50%) scale(1.45);opacity:0} }
+  .phone-reps { font-size: 86px; font-weight: 900; letter-spacing: -4px; color: var(--accent); line-height: 1; margin-top: 26px; position: relative; z-index: 1; }
+  .phone-lbl { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; position: relative; z-index: 1; }
+  .phone-bottom { position: absolute; bottom: 20px; left: 14px; right: 14px; background: rgba(255,107,53,0.1); border: 1px solid rgba(255,107,53,0.18); border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .phone-bottom-lbl { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
+  .phone-bottom-val { font-size: 13px; font-weight: 800; color: var(--text); }
+
+  /* SECTIONS */
+  .container { max-width: 1100px; margin: 0 auto; padding: 80px 24px; }
+  .divider { height: 1px; background: var(--border); max-width: 1100px; margin: 0 auto; }
+  .eyebrow { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 12px; }
+  .section-h { font-size: clamp(30px, 4.5vw, 50px); font-weight: 900; letter-spacing: -1.5px; line-height: 1.05; margin-bottom: 14px; }
+  .section-sub { font-size: 17px; color: var(--text2); max-width: 480px; line-height: 1.6; margin-bottom: 44px; }
+
+  /* FEATURES */
+  .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .feat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; transition: border-color .2s; }
+  .feat-card:hover { border-color: rgba(255,107,53,0.2); }
+  .feat-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,107,53,0.1); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 14px; }
+  .feat-title { font-size: 16px; font-weight: 700; margin-bottom: 7px; }
+  .feat-desc { font-size: 14px; color: var(--text2); line-height: 1.6; }
+  .feat-tag { display: inline-block; background: rgba(255,107,53,0.1); color: var(--accent); border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; margin-top: 10px; }
+
+  /* PRICING */
+  #pricing { max-width: 1100px; margin: 0 auto; padding: 80px 24px 100px; }
+  .pricing-toggle { display: inline-flex; background: var(--bg3); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 4px; margin-bottom: 48px; }
+  .ptbtn { background: none; border: none; color: var(--text2); padding: 8px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; font-family: var(--font); }
+  .ptbtn.on { background: rgba(255,255,255,0.1); color: var(--text); }
+  .save-pill { background: rgba(48,209,88,0.15); color: #30D158; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px; margin-left: 5px; text-transform: uppercase; letter-spacing: .3px; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; align-items: start; }
+  .pc { background: var(--bg3); border: 1px solid var(--border); border-radius: 24px; padding: 30px; position: relative; overflow: hidden; transition: transform .2s; }
+  .pc:hover { transform: translateY(-3px); }
+  .pc.feat { border-color: rgba(255,107,53,0.35); background: linear-gradient(145deg, rgba(255,107,53,0.07) 0%, var(--bg3) 55%); }
+  .pc.feat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+  .popular-tag { position: absolute; top: 18px; right: 18px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 4px 10px; border-radius: 999px; }
+  .pc-tier { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .pc-price { font-size: 50px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+  .pc-price.acc { color: var(--accent); }
+  .pc-period { font-size: 13px; color: var(--text2); margin: 4px 0 4px; }
+  .pc-note { font-size: 11px; color: var(--text3); margin-bottom: 22px; min-height: 16px; }
+  .pc-btn { width: 100%; padding: 13px; border-radius: 13px; font-size: 15px; font-weight: 700; cursor: pointer; border: none; font-family: var(--font); margin-bottom: 22px; transition: opacity .2s; text-decoration: none; display: block; text-align: center; }
+  .pc-btn.acc { background: var(--accent); color: #fff; }
+  .pc-btn.acc:hover { opacity: .88; }
+  .pc-btn.gl { background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid var(--border); }
+  .pc-btn.gl:hover { background: rgba(255,255,255,0.11); }
+  .pc-div { height: 1px; background: var(--border); margin-bottom: 18px; }
+  .pc-feats { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .pc-feats li { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; color: var(--text2); line-height: 1.4; }
+  .pc-feats li.on { color: var(--text); }
+  .ck { color: #30D158; font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .ds { color: var(--text3); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* TESTIMONIALS */
+  .testi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .testi { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
+  .testi-stars { color: #FFD60A; font-size: 13px; margin-bottom: 10px; }
+  .testi-text { font-size: 15px; line-height: 1.65; margin-bottom: 14px; }
+  .testi-by { font-size: 12px; font-weight: 600; color: var(--text2); }
+
+  /* CTA BAND */
+  .cta-band { max-width: 1100px; margin: 0 auto 100px; border-radius: 28px; background: linear-gradient(135deg, rgba(255,107,53,0.13) 0%, rgba(255,107,53,0.03) 100%); border: 1px solid rgba(255,107,53,0.18); padding: 64px 40px; text-align: center; position: relative; overflow: hidden; }
+  .cta-band-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 600px; height: 300px; background: radial-gradient(circle, rgba(255,107,53,0.1) 0%, transparent 65%); pointer-events: none; }
+  .cta-band h2 { font-size: clamp(28px,4vw,44px); font-weight: 900; letter-spacing: -1.2px; margin-bottom: 12px; position: relative; }
+  .cta-band p { font-size: 17px; color: var(--text2); margin-bottom: 32px; position: relative; }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 36px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; color: var(--text3); font-size: 13px; }
+  footer a { color: var(--text3); text-decoration: none; }
+  footer a:hover { color: var(--text2); }
+  .footer-links { display: flex; gap: 22px; flex-wrap: wrap; }
+
+  @media (max-width: 640px) {
+    nav { padding: 14px 20px; }
+    .nav-links { display: none; }
+    .pricing-grid, .feat-grid, .testi-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/app">
+    <div class="logo-icon">⚡</div>
+    <span class="logo-name">Rep Legend</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="rep-legend-app.html">Open App</a>
+  </div>
+  <a class="btn btn-acc" href="auth.html?mode=signup">Get Started Free</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-badge">⚡ Auto-Rep Beta · Hands-Free Rep Counting</div>
+  <h1 class="hero-title">Track Every Rep.<br>Become a <span class="hl">Legend.</span></h1>
+  <p class="hero-sub">The workout app that counts reps for you using your phone's motion sensor. Log smarter, streak longer, rank higher.</p>
+  <div class="hero-btns">
+    <a class="btn btn-acc btn-lg" href="auth.html?mode=signup">Start for Free</a>
+    <a class="btn btn-ghost" href="#pricing">See Plans</a>
+  </div>
+  <div class="hero-proof">
+    <span>🔥 No account required</span>
+    <span>·</span>
+    <span>📱 Works in browser</span>
+    <span>·</span>
+    <span>🔒 Data stays on your device</span>
+  </div>
+</section>
+
+<div class="mockup-wrap">
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="pulse-ring pr1"></div>
+    <div class="pulse-ring pr2"></div>
+    <div class="phone-reps">12</div>
+    <div class="phone-lbl">Reps Detected</div>
+    <div class="phone-bottom">
+      <div>
+        <div class="phone-bottom-lbl">Legend Score</div>
+        <div class="phone-bottom-val">Warrior · 3,840 pts</div>
+      </div>
+      <div style="font-size:22px">⚔️</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<section class="container" id="features">
+  <div class="eyebrow">Built different</div>
+  <h2 class="section-h">Everything your workout deserves.</h2>
+  <p class="section-sub">Smart tools designed for lifters who actually show up. Zero friction.</p>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📱</div>
+      <div class="feat-title">Auto-Rep Detection</div>
+      <div class="feat-desc">Your phone's accelerometer detects reps in real-time. No wearable needed — just lift and the app counts.</div>
+      <div class="feat-tag">Beta</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🌟</div>
+      <div class="feat-title">Legend Score &amp; Rank</div>
+      <div class="feat-desc">A scoring system that turns gym consistency into rank. Go from Rookie all the way to Rep Legend.</div>
+      <div class="feat-tag">PRO</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🎨</div>
+      <div class="feat-title">7 Premium Themes</div>
+      <div class="feat-desc">Carbon, Ocean, Aurora, Forge, Ember, Dusk, Glacier. Match your gym's energy.</div>
+      <div class="feat-tag">PRO</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">😮‍💨</div>
+      <div class="feat-title">Guided Rest Breathing</div>
+      <div class="feat-desc">4-7-8 Deep Relax or Box Focus breathing keeps you calm and primed between sets.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Stats &amp; Milestones</div>
+      <div class="feat-desc">Volume charts, muscle distribution, and 12 achievement badges that track your full journey.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔒</div>
+      <div class="feat-title">Private by Design</div>
+      <div class="feat-desc">100% local storage. Your data never leaves your device. No accounts, no tracking, no ads.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SOCIAL SECTION -->
+<section id="social" style="padding:80px 0;background:#0A0C14;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.1) 0%,transparent 65%);pointer-events:none;"></div>
+  <div style="max-width:1100px;margin:0 auto;padding:0 24px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:32px;margin-bottom:56px;">
+      <div>
+        <div class="eyebrow" style="color:#818CF8;">Community</div>
+        <h2 class="section-h">Your city. <span style="color:#818CF8;">Grinding.</span></h2>
+        <p class="section-sub" style="max-width:440px;">
+          See what lifters near you are posting. Share your workout score card or a gym photo.
+          No comments. Just respect — upvote what earns it.
+        </p>
+        <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.2);border-radius:999px;padding:6px 14px;font-size:11px;font-weight:800;color:#818CF8;text-transform:uppercase;letter-spacing:.8px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#818CF8;animation:pulse-s 2s infinite;display:inline-block;"></span>
+          Free for all users
+        </div>
+      </div>
+      <a href="/social" style="display:inline-flex;align-items:center;gap:8px;background:rgba(129,140,248,0.12);border:1px solid rgba(129,140,248,0.25);color:#A5B4FC;padding:11px 22px;border-radius:999px;font-size:14px;font-weight:700;text-decoration:none;transition:background .2s;white-space:nowrap;" onmouseover="this.style.background='rgba(129,140,248,0.2)'" onmouseout="this.style.background='rgba(129,140,248,0.12)'">
+        Browse the feed →
+      </a>
+    </div>
+
+    <!-- Mock Feed Grid -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+
+      <!-- Card 1 — Score Card -->
+      <div style="background:#0F172A;border:1px solid rgba(129,140,248,0.15);border-radius:20px;overflow:hidden;position:relative;">
+        <div style="background:linear-gradient(160deg,#0F172A 0%,#1E1B4B 100%);padding:28px 22px 20px;text-align:center;border-bottom:1px solid rgba(129,140,248,0.1);">
+          <div style="font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(165,180,252,0.5);margin-bottom:8px;">WORKOUT COMPLETE</div>
+          <div style="font-size:72px;font-weight:900;letter-spacing:-3px;color:#F59E0B;line-height:1;text-shadow:0 0 40px rgba(245,158,11,0.3);">A+</div>
+          <div style="font-size:11px;color:rgba(165,180,252,0.6);margin-top:4px;">Personal Best 🔥</div>
+          <div style="display:flex;justify-content:space-around;margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">147</div><div style="font-size:9px;color:rgba(165,180,252,0.5);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Reps</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">6</div><div style="font-size:9px;color:rgba(165,180,252,0.5);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Sets</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">48m</div><div style="font-size:9px;color:rgba(165,180,252,0.5);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Duration</div></div>
+          </div>
+        </div>
+        <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FF6B35,#C94A1A);display:flex;align-items:center;justify-content:center;font-size:12px;">M</div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#fff;">marcus_lifts</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.3);">0.4 mi away · 2h ago</div>
+            </div>
+          </div>
+          <button style="display:flex;align-items:center;gap:5px;background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.2);border-radius:999px;padding:5px 12px;color:#818CF8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">▲ 84</button>
+        </div>
+      </div>
+
+      <!-- Card 2 — Gym Photo with breathing overlay -->
+      <div style="background:#0F172A;border:1px solid rgba(129,140,248,0.15);border-radius:20px;overflow:hidden;position:relative;">
+        <div style="height:220px;background:linear-gradient(160deg,#0F172A 0%,#162032 50%,#1a1230 100%);position:relative;display:flex;align-items:center;justify-content:center;">
+          <!-- Breathing overlay simulation -->
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(15,23,42,0.9) 100%);"></div>
+          <div style="font-size:48px;opacity:0.07;position:absolute;">🏋️</div>
+          <div style="position:relative;z-index:1;text-align:center;">
+            <div style="font-size:28px;font-weight:300;letter-spacing:.2em;color:#818CF8;opacity:.8;">breathe</div>
+            <div style="font-size:9px;color:rgba(129,140,248,0.4);letter-spacing:.1em;text-transform:uppercase;margin-top:6px;font-weight:600;">4 · 7 · 8</div>
+          </div>
+          <div style="position:absolute;bottom:12px;left:12px;background:rgba(15,23,42,0.8);border:1px solid rgba(129,140,248,0.2);border-radius:8px;padding:4px 10px;font-size:10px;color:#A5B4FC;font-weight:700;">📍 Iron Vault Gym</div>
+        </div>
+        <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#818CF8,#4F46E5);display:flex;align-items:center;justify-content:center;font-size:12px;">P</div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#fff;">priya.trains</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.3);">1.1 mi away · 5h ago</div>
+            </div>
+          </div>
+          <button style="display:flex;align-items:center;gap:5px;background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.2);border-radius:999px;padding:5px 12px;color:#818CF8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">▲ 61</button>
+        </div>
+      </div>
+
+      <!-- Card 3 — Score Card B grade -->
+      <div style="background:#0F172A;border:1px solid rgba(129,140,248,0.15);border-radius:20px;overflow:hidden;position:relative;">
+        <div style="background:linear-gradient(160deg,#0F172A 0%,#0D2318 100%);padding:28px 22px 20px;text-align:center;border-bottom:1px solid rgba(52,211,153,0.08);">
+          <div style="font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(52,211,153,0.5);margin-bottom:8px;">WORKOUT COMPLETE</div>
+          <div style="font-size:72px;font-weight:900;letter-spacing:-3px;color:#34D399;line-height:1;text-shadow:0 0 40px rgba(52,211,153,0.2);">B+</div>
+          <div style="font-size:11px;color:rgba(52,211,153,0.5);margin-top:4px;">🔥 Day 12 Streak</div>
+          <div style="display:flex;justify-content:space-around;margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">112</div><div style="font-size:9px;color:rgba(52,211,153,0.5);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Reps</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">5</div><div style="font-size:9px;color:rgba(52,211,153,0.5);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Sets</div></div>
+            <div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:#fff;">38m</div><div style="font-size:9px;color:rgba(52,211,153,0.5);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">Duration</div></div>
+          </div>
+        </div>
+        <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#34D399,#059669);display:flex;align-items:center;justify-content:center;font-size:12px;">J</div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#fff;">jordan.method</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.3);">2.3 mi away · 1d ago</div>
+            </div>
+          </div>
+          <button style="display:flex;align-items:center;gap:5px;background:rgba(129,140,248,0.1);border:1px solid rgba(129,140,248,0.2);border-radius:999px;padding:5px 12px;color:#818CF8;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">▲ 47</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom note -->
+    <div style="text-align:center;margin-top:28px;font-size:13px;color:rgba(255,255,255,0.2);">
+      No comments. No algorithm. Just lifters near you, ranked by respect. · <a href="/social" style="color:rgba(129,140,248,0.6);text-decoration:none;">See the full feed →</a>
+    </div>
+  </div>
+</section>
+
+<style>
+@keyframes pulse-s { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
+</style>
+
+<div class="divider"></div>
+
+<section id="pricing">
+  <div style="text-align:center;margin-bottom:16px;padding:0 24px">
+    <div class="eyebrow">Simple pricing</div>
+    <h2 class="section-h">Start free. Level up when ready.</h2>
+  </div>
+  <div style="display:flex;justify-content:center;margin-bottom:48px">
+    <div class="pricing-toggle">
+      <button class="ptbtn on" id="ptm" onclick="setBilling('monthly')">Monthly</button>
+      <button class="ptbtn" id="pta" onclick="setBilling('annual')">Annual <span class="save-pill">Save 20%</span></button>
+    </div>
+  </div>
+  <div class="pricing-grid" style="padding:0 24px">
+
+    <!-- FREE -->
+    <div class="pc">
+      <div class="pc-tier">Free</div>
+      <div class="pc-price">$0</div>
+      <div class="pc-period">forever</div>
+      <div class="pc-note"></div>
+      <a class="pc-btn gl" href="auth.html?mode=signup">Start for Free</a>
+      <div class="pc-div"></div>
+      <ul class="pc-feats">
+        <li class="on"><span class="ck">✓</span> Unlimited workout logging</li>
+        <li class="on"><span class="ck">✓</span> Built-in exercise library</li>
+        <li class="on"><span class="ck">✓</span> Rest timer with breathing</li>
+        <li class="on"><span class="ck">✓</span> Basic stats (30-day history)</li>
+        <li class="on"><span class="ck">✓</span> Auto-Rep Beta (limited sets/day)</li>
+        <li><span class="ds">–</span> Legend Score &amp; rank tiers</li>
+        <li><span class="ds">–</span> Premium themes</li>
+        <li><span class="ds">–</span> Full history &amp; advanced charts</li>
+        <li><span class="ds">–</span> AI coach hints</li>
+      </ul>
+    </div>
+
+    <!-- PRO -->
+    <div class="pc feat">
+      <div class="popular-tag">Most Popular</div>
+      <div class="pc-tier">Pro</div>
+      <div class="pc-price acc" id="pro-p">$4.99</div>
+      <div class="pc-period" id="pro-per">per month</div>
+      <div class="pc-note" id="pro-note"></div>
+      <a class="pc-btn acc" href="auth.html?mode=signup&next=checkout.html%3Fplan%3Dpro" id="pro-cta">Get Pro</a>
+      <div class="pc-div"></div>
+      <ul class="pc-feats">
+        <li class="on"><span class="ck">✓</span> Everything in Free</li>
+        <li class="on"><span class="ck">✓</span> <strong>Legend Score &amp; all 7 rank tiers</strong></li>
+        <li class="on"><span class="ck">✓</span> <strong>Auto-Rep — unlimited sets</strong></li>
+        <li class="on"><span class="ck">✓</span> 7 premium themes</li>
+        <li class="on"><span class="ck">✓</span> Full workout history</li>
+        <li class="on"><span class="ck">✓</span> 12 milestone badges</li>
+        <li class="on"><span class="ck">✓</span> Custom exercise library</li>
+        <li class="on"><span class="ck">✓</span> Advanced stats &amp; charts</li>
+        <li><span class="ds">–</span> AI coach hints</li>
+      </ul>
+    </div>
+
+    <!-- ELITE -->
+    <div class="pc">
+      <div class="pc-tier">Elite</div>
+      <div class="pc-price" id="elite-p">$9.99</div>
+      <div class="pc-period" id="elite-per">per month</div>
+      <div class="pc-note" id="elite-note"></div>
+      <a class="pc-btn gl" href="auth.html?mode=signup&next=checkout.html%3Fplan%3Delite" id="elite-cta">Get Elite</a>
+      <div class="pc-div"></div>
+      <ul class="pc-feats">
+        <li class="on"><span class="ck">✓</span> Everything in Pro</li>
+        <li class="on"><span class="ck">✓</span> <strong>AI coach hints &amp; cues</strong></li>
+        <li class="on"><span class="ck">✓</span> Early access to new features</li>
+        <li class="on"><span class="ck">✓</span> Priority support</li>
+        <li class="on"><span class="ck">✓</span> Export workouts (CSV / JSON)</li>
+        <li class="on"><span class="ck">✓</span> Rep Legend exclusive badge</li>
+        <li class="on"><span class="ck">✓</span> Founding member status</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider" style="margin-top:60px"></div>
+
+<section class="container">
+  <div class="eyebrow">What lifters say</div>
+  <div class="testi-grid">
+    <div class="testi">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-text">"Auto-Rep actually works. I don't have to think about counting anymore — I just lift and it tracks."</div>
+      <div class="testi-by">Marcus T. · Powerlifter</div>
+    </div>
+    <div class="testi">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-text">"The Legend Score is addictive. I went from skipping sessions to hitting the gym 5x a week just to rank up."</div>
+      <div class="testi-by">Jess R. · Hypertrophy focus</div>
+    </div>
+    <div class="testi">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-text">"Cleanest workout app I've used. Dark theme is 🔥 and the breathing timer actually helps between sets."</div>
+      <div class="testi-by">Paolo B. · Rep Legend</div>
+    </div>
+  </div>
+</section>
+
+<div class="cta-band" style="margin-top:0">
+  <div class="cta-band-glow"></div>
+  <h2>Ready to become a Rep Legend?</h2>
+  <p>Start free — no account, no credit card. Your first rep is one tap away.</p>
+  <a class="btn btn-acc" href="rep-legend-app.html" style="padding:18px 48px;border-radius:999px;font-size:17px;font-weight:700">Launch the App →</a>
+</div>
+
+<footer>
+  <div style="display:flex;align-items:center;gap:9px">
+    <div class="logo-icon" style="width:26px;height:26px;font-size:14px">⚡</div>
+    <span style="font-weight:700;color:var(--text2)">Rep Legend</span>
+  </div>
+  <div class="footer-links">
+    <a href="/app">Privacy</a>
+    <a href="/app">Terms</a>
+    <a href="/app">Support</a>
+    <a href="rep-legend-app.html">Open App</a>
+  </div>
+  <div>© 2026 Rep Legend</div>
+</footer>
+
+<script>
+const PRICES = {
+  monthly: { pro:'$4.99', elite:'$9.99', period:'per month', proNote:'', eliteNote:'' },
+  annual:  { pro:'$3.99', elite:'$7.99', period:'per month, billed annually',
+             proNote:'Billed $47.88/yr · save $12', eliteNote:'Billed $95.88/yr · save $24' }
+};
+function setBilling(b) {
+  document.getElementById('ptm').classList.toggle('on', b==='monthly');
+  document.getElementById('pta').classList.toggle('on', b==='annual');
+  const p = PRICES[b];
+  document.getElementById('pro-p').textContent = p.pro;
+  document.getElementById('pro-per').textContent = p.period;
+  document.getElementById('pro-note').textContent = p.proNote;
+  document.getElementById('elite-p').textContent = p.elite;
+  document.getElementById('elite-per').textContent = p.period;
+  document.getElementById('elite-note').textContent = p.eliteNote;
+  document.getElementById('pro-cta').href = 'auth.html?mode=signup&next=checkout.html%3Fplan%3Dpro%26billing%3D' + b;
+  document.getElementById('elite-cta').href = 'auth.html?mode=signup&next=checkout.html%3Fplan%3Delite%26billing%3D' + b;
+}
+</script>
+</body>
+</html>
